@@ -3,23 +3,50 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently \"npm:dev:web\" \"npm:dev:server\"",
+    "dev:web": "next dev",
+    "dev:server": "nodemon server/index.js",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "start:server": "node server/index.js",
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@prisma/client": "^6.18.0",
+    "@tiptap/core": "^3.22.4",
+    "@tiptap/starter-kit": "^3.22.4",
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.4.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "markdown-it": "^14.1.0",
+    "morgan": "^1.10.1",
     "next": "16.2.4",
+    "prisma": "^6.18.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "slugify": "^1.6.6",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "nodemon": "^3.1.14",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

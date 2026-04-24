@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  posts     Post[]
+}
+
+model Tag {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  postTags  PostTag[]
+}
+
+model Post {
+  id                Int                 @id @default(autoincrement())
+  title             String
+  slug              String              @unique
+  excerpt           String
+  coverImage        String?
+  contentMarkdown   String
+  contentHtml       String
+  status            PostStatus          @default(DRAFT)
+  publishedAt       DateTime?
+  viewCount         Int                 @default(0)
+  categoryId        Int
+  category          Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  postTags          PostTag[]
+  comments          Comment[]
+  aiReview          AiReview?
+  aiOfficialComment AiOfficialComment?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
+
+model PostTag {
+  postId Int
+  tagId  Int
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model Comment {
+  id         Int      @id @default(autoincrement())
+  postId     Int
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorName String
+  email      String?
+  content    String
+  floor      Int
+  isAi       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model AiReview {
+  id                 Int      @id @default(autoincrement())
+  postId             Int      @unique
+  post               Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  typoIssues         String
+  clarityIssues      String
+  logicIssues        String
+  knowledgeIssues    String
+  formatIssues       String
+  overallSuggestion  String
+  rawResponse        String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model AiOfficialComment {
+  id        Int      @id @default(autoincrement())
+  postId    Int      @unique
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
