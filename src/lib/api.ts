@@ -83,14 +83,6 @@ export type PostRecord = {
   contentHtml: string;
   category: { id: number; name: string; slug: string };
   tags: Array<{ id: number; name: string; slug: string }>;
-  aiReview?: {
-    typoIssues: string;
-    clarityIssues: string;
-    logicIssues: string;
-    knowledgeIssues: string;
-    formatIssues: string;
-    overallSuggestion: string;
-  } | null;
   aiOfficialComment?: { content: string } | null;
   commentCount: number;
   comments?: CommentRecord[];

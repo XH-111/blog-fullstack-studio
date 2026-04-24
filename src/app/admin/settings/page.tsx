@@ -42,6 +42,35 @@ export default function AdminSettingsPage() {
       });
   }, [router, token]);
 
+  async function handleProfileFileChange(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setMessage("请选择图片文件");
+      return;
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      setMessage("头像图片请控制在 4MB 以内");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        const imageDataUrl = reader.result;
+        setForm((current) => ({ ...current, profileImage: imageDataUrl }));
+        setMessage("本地头像已载入，点击保存设置后生效");
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setIsSaving(true);
@@ -78,7 +107,7 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="font-serif text-4xl text-[var(--color-ink)]">站点设置</h1>
         <p className="mt-2 text-sm text-[var(--color-text)]">
-          这里可以直接修改首页主视觉图片、个人照片、主标题和简介。保存后首页会立即读取新配置。
+          这里可以修改首页主视觉图片、个人头像、主标题和简介。头像支持直接从本地选择图片上传。
         </p>
       </div>
 
@@ -161,17 +190,37 @@ export default function AdminSettingsPage() {
                 />
               </label>
 
-              <label className="space-y-2 text-sm text-[var(--color-text)]">
-                <span>个人照片 URL</span>
+              <div className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>个人头像</span>
                 <input
-                  value={form.profileImage || ""}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, profileImage: event.target.value }))
-                  }
-                  placeholder="https://..."
-                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => void handleProfileFileChange(event)}
+                  className="block w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 text-sm outline-none file:mr-3 file:rounded-full file:border-0 file:bg-[var(--color-accent)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
                 />
-              </label>
+                <div className="flex gap-2">
+                  <input
+                    value={form.profileImage || ""}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        profileImage: event.target.value,
+                      }))
+                    }
+                    placeholder="也可以直接粘贴头像 URL"
+                    className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({ ...current, profileImage: "" }))
+                    }
+                    className="rounded-[18px] border border-[var(--color-line)] bg-white px-4 py-3 text-sm"
+                  >
+                    清空
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-between gap-4">

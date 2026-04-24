@@ -82,38 +82,10 @@ export default function PostDetailPage() {
             <span>{post.viewCount} 次阅读</span>
           </div>
           <div
-            className="prose prose-slate mt-8 max-w-none"
+            className="prose prose-slate mt-8 max-w-none [&_img]:h-auto [&_img]:max-w-full"
             dangerouslySetInnerHTML={{ __html: post.contentHtml }}
           />
         </SurfaceCard>
-
-        {post.aiReview && (
-          <SurfaceCard>
-            <h2 className="font-serif text-3xl text-[var(--color-ink)]">AI 内容审核建议</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              {[
-                ["错别字", post.aiReview.typoIssues],
-                ["语句通顺", post.aiReview.clarityIssues],
-                ["逻辑结构", post.aiReview.logicIssues],
-                ["知识准确", post.aiReview.knowledgeIssues],
-                ["格式排版", post.aiReview.formatIssues],
-                ["综合建议", post.aiReview.overallSuggestion],
-              ].map(([label, value]) => (
-                <div
-                  key={label}
-                  className="rounded-[20px] border border-[var(--color-line)] bg-white/88 p-4"
-                >
-                  <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">
-                    {label}
-                  </p>
-                  <p className="mt-2 text-sm leading-7 text-[var(--color-text)]">
-                    {value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </SurfaceCard>
-        )}
 
         <SurfaceCard>
           <h2 className="font-serif text-3xl text-[var(--color-ink)]">评论区</h2>
@@ -126,7 +98,7 @@ export default function PostDetailPage() {
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <p className="font-semibold text-[var(--color-ink)]">
                     {comment.authorName}
-                    {comment.isAi ? " · 官方 AI" : ""}
+                    {comment.isAi ? " · AI 正确性评论" : ""}
                   </p>
                   <p className="text-[var(--color-text-faint)]">
                     #{comment.floor} · {new Date(comment.createdAt).toLocaleString("zh-CN")}

@@ -11,7 +11,7 @@ type AdminPostFormProps = {
   initialPost?: PostRecord | null;
 };
 
-type SaveState = "idle" | "saving";
+type SaveState = "idle" | "saving-draft" | "saving-published";
 
 export function AdminPostForm({
   token,
@@ -33,8 +33,8 @@ export function AdminPostForm({
   const [selectedTags, setSelectedTags] = useState<string[]>(
     initialPost?.tags.map((tag) => tag.name) || []
   );
-  const [status, setStatus] = useState<"DRAFT" | "PUBLISHED">(
-    initialPost?.status || "DRAFT"
+  const [generateAiComment, setGenerateAiComment] = useState(
+    Boolean(initialPost?.aiOfficialComment)
   );
   const [message, setMessage] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -59,10 +59,10 @@ export function AdminPostForm({
   }, [initialPost?.category.id]);
 
   const tagInput = useMemo(() => selectedTags.join(", "), [selectedTags]);
+  const isPublished = initialPost?.status === "PUBLISHED";
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setSaveState("saving");
+  async function handleSubmit(nextStatus: "DRAFT" | "PUBLISHED") {
+    setSaveState(nextStatus === "PUBLISHED" ? "saving-published" : "saving-draft");
     setMessage("");
 
     try {
@@ -73,7 +73,8 @@ export function AdminPostForm({
         contentMarkdown,
         categoryId,
         tags: selectedTags,
-        status,
+        status: nextStatus,
+        generateAiComment,
       };
 
       if (mode === "create") {
@@ -94,13 +95,12 @@ export function AdminPostForm({
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存失败");
-    } finally {
       setSaveState("idle");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-2">
         <input
           value={title}
@@ -120,9 +120,8 @@ export function AdminPostForm({
       <textarea
         value={excerpt}
         onChange={(event) => setExcerpt(event.target.value)}
-        placeholder="文章摘要"
+        placeholder="文章摘要（可留空，发布时会由 AI 自动补充）"
         className="min-h-[110px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
-        required
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -152,16 +151,15 @@ export function AdminPostForm({
           className="rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
         />
 
-        <select
-          value={status}
-          onChange={(event) =>
-            setStatus(event.target.value as "DRAFT" | "PUBLISHED")
-          }
-          className="rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
-        >
-          <option value="DRAFT">草稿</option>
-          <option value="PUBLISHED">发布</option>
-        </select>
+        <label className="flex items-center justify-between rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 text-sm text-[var(--color-text)]">
+          <span>生成 AI 正确性评论</span>
+          <input
+            type="checkbox"
+            checked={generateAiComment}
+            onChange={(event) => setGenerateAiComment(event.target.checked)}
+            className="h-4 w-4 accent-[var(--color-accent)]"
+          />
+        </label>
       </div>
 
       <div className="rounded-[24px] border border-[var(--color-line)] bg-[var(--color-panel-soft)] p-4">
@@ -188,20 +186,41 @@ export function AdminPostForm({
 
       <MarkdownEditor value={contentMarkdown} onChange={setContentMarkdown} />
 
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-sm text-[var(--color-text-faint)]">{message}</span>
-        <button
-          type="submit"
-          disabled={saveState === "saving"}
-          className="rounded-full bg-[var(--color-accent)] px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {saveState === "saving"
-            ? "保存中..."
-            : mode === "create"
-              ? "创建文章"
-              : "保存修改"}
-        </button>
+      <div className="rounded-[24px] border border-[var(--color-line)] bg-[var(--color-panel-soft)] p-4">
+        <p className="text-sm leading-7 text-[var(--color-text)]">
+          AI 审核会在每次保存时自动刷新。AI 评论现在是可选项，只会从内容正确性角度给出一条简短评论。
+        </p>
       </div>
-    </form>
+
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <span className="text-sm text-[var(--color-text-faint)]">{message}</span>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => void handleSubmit("DRAFT")}
+            disabled={saveState !== "idle"}
+            className="rounded-full border border-[var(--color-line)] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--color-ink)] disabled:opacity-60"
+          >
+            {saveState === "saving-draft"
+              ? "保存草稿中..."
+              : isPublished
+                ? "撤回为草稿"
+                : "保存为草稿"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSubmit("PUBLISHED")}
+            disabled={saveState !== "idle"}
+            className="rounded-full bg-[var(--color-accent)] px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {saveState === "saving-published"
+              ? "发布中..."
+              : mode === "create"
+                ? "发布文章"
+                : "保存并发布"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

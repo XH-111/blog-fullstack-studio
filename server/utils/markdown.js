@@ -1,7 +1,7 @@
 const MarkdownIt = require("markdown-it");
 
 const markdown = new MarkdownIt({
-  html: false,
+  html: true,
   linkify: true,
   breaks: true,
 });

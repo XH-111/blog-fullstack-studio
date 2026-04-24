@@ -4,8 +4,8 @@ const { requireAdmin } = require("../utils/auth");
 const { renderMarkdown } = require("../utils/markdown");
 const { toSlug } = require("../utils/slug");
 const {
-  reviewPostContent,
   generateOfficialComment,
+  generateExcerpt,
 } = require("../services/ai-service");
 
 const router = express.Router();
@@ -65,18 +65,31 @@ async function buildUniqueSlug(title, ignoreId) {
   }
 }
 
-async function refreshAiArtifacts(post) {
-  const review = await reviewPostContent(post);
-  const officialComment = await generateOfficialComment(post);
-
-  await prisma.aiReview.upsert({
-    where: { postId: post.id },
-    update: review,
-    create: {
-      postId: post.id,
-      ...review,
+async function deleteAiComment(postId) {
+  await prisma.comment.deleteMany({
+    where: {
+      postId,
+      isAi: true,
     },
   });
+}
+
+async function refreshAiArtifacts(post, options = {}) {
+  const { generateAiComment = false } = options;
+
+  await prisma.aiReview.deleteMany({
+    where: { postId: post.id },
+  });
+
+  if (!generateAiComment) {
+    await prisma.aiOfficialComment.deleteMany({
+      where: { postId: post.id },
+    });
+    await deleteAiComment(post.id);
+    return;
+  }
+
+  const officialComment = await generateOfficialComment(post);
 
   await prisma.aiOfficialComment.upsert({
     where: { postId: post.id },
@@ -99,22 +112,23 @@ async function refreshAiArtifacts(post) {
       where: { id: existingAiComment.id },
       data: { content: officialComment },
     });
-  } else {
-    const lastComment = await prisma.comment.findFirst({
-      where: { postId: post.id },
-      orderBy: { floor: "desc" },
-    });
-
-    await prisma.comment.create({
-      data: {
-        postId: post.id,
-        authorName: "AI 博客助手",
-        content: officialComment,
-        floor: (lastComment?.floor || 0) + 1,
-        isAi: true,
-      },
-    });
+    return;
   }
+
+  const lastComment = await prisma.comment.findFirst({
+    where: { postId: post.id },
+    orderBy: { floor: "desc" },
+  });
+
+  await prisma.comment.create({
+    data: {
+      postId: post.id,
+      authorName: "AI 博客助手",
+      content: officialComment,
+      floor: (lastComment?.floor || 0) + 1,
+      isAi: true,
+    },
+  });
 }
 
 function mapPost(post) {
@@ -133,11 +147,54 @@ function mapPost(post) {
     contentHtml: post.contentHtml,
     category: post.category,
     tags: post.postTags.map((item) => item.tag),
-    aiReview: post.aiReview,
     aiOfficialComment: post.aiOfficialComment,
     commentCount: post.comments.length,
     comments: post.comments,
   };
+}
+
+async function buildPostPayload(body, ignoreId) {
+  const title = String(body.title || "").trim();
+  const contentMarkdown = String(body.contentMarkdown || "").trim();
+  const categoryId = Number(body.categoryId);
+  const coverImage = String(body.coverImage || "").trim() || null;
+  const requestedExcerpt = String(body.excerpt || "").trim();
+  const excerpt =
+    requestedExcerpt ||
+    (title && contentMarkdown
+      ? await generateExcerpt({ title, contentMarkdown })
+      : "");
+
+  if (!title || !contentMarkdown || !categoryId) {
+    return {
+      error: "文章标题、正文和分类不能为空",
+    };
+  }
+
+  return {
+    title,
+    excerpt,
+    coverImage,
+    contentMarkdown,
+    categoryId,
+    tags: Array.isArray(body.tags) ? body.tags : [],
+    status: body.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+    generateAiComment: body.generateAiComment === true,
+    slug: await buildUniqueSlug(title, ignoreId),
+  };
+}
+
+async function fetchFullPost(postId) {
+  return prisma.post.findUnique({
+    where: { id: postId },
+    include: {
+      category: true,
+      postTags: { include: { tag: true } },
+      aiReview: true,
+      aiOfficialComment: true,
+      comments: true,
+    },
+  });
 }
 
 router.get("/", async (req, res) => {
@@ -242,102 +299,99 @@ router.get("/:slug", async (req, res) => {
 });
 
 router.post("/", requireAdmin, async (req, res) => {
-  const { title, excerpt, coverImage, contentMarkdown, categoryId, tags = [], status } =
-    req.body || {};
+  const payload = await buildPostPayload(req.body || {});
 
-  if (!title || !excerpt || !contentMarkdown || !categoryId) {
-    return res.status(400).json({ message: "文章参数不完整" });
+  if (payload.error) {
+    return res.status(400).json({ message: payload.error });
   }
 
-  const slug = await buildUniqueSlug(title);
-  const isPublished = status === "PUBLISHED";
-
+  const isPublished = payload.status === "PUBLISHED";
   const post = await prisma.post.create({
     data: {
-      title,
-      slug,
-      excerpt,
-      coverImage: coverImage || null,
-      contentMarkdown,
-      contentHtml: renderMarkdown(contentMarkdown),
-      categoryId: Number(categoryId),
-      status: isPublished ? "PUBLISHED" : "DRAFT",
+      title: payload.title,
+      slug: payload.slug,
+      excerpt: payload.excerpt,
+      coverImage: payload.coverImage,
+      contentMarkdown: payload.contentMarkdown,
+      contentHtml: renderMarkdown(payload.contentMarkdown),
+      categoryId: payload.categoryId,
+      status: payload.status,
       publishedAt: isPublished ? new Date() : null,
     },
   });
 
-  await syncTags(post.id, tags);
+  await syncTags(post.id, payload.tags);
 
-  const fullPost = await prisma.post.findUnique({
-    where: { id: post.id },
-    include: { category: true, postTags: { include: { tag: true } }, comments: true },
+  const fullPost = await fetchFullPost(post.id);
+  await refreshAiArtifacts(fullPost, {
+    generateAiComment: payload.generateAiComment,
   });
 
-  await refreshAiArtifacts(fullPost);
-
-  const finalPost = await prisma.post.findUnique({
-    where: { id: post.id },
-    include: {
-      category: true,
-      postTags: { include: { tag: true } },
-      aiReview: true,
-      aiOfficialComment: true,
-      comments: true,
-    },
-  });
-
+  const finalPost = await fetchFullPost(post.id);
   res.json(mapPost(finalPost));
 });
 
 router.put("/:id", requireAdmin, async (req, res) => {
   const postId = Number(req.params.id);
-  const { title, excerpt, coverImage, contentMarkdown, categoryId, tags = [], status } =
-    req.body || {};
-
-  if (!title || !excerpt || !contentMarkdown || !categoryId) {
-    return res.status(400).json({ message: "文章参数不完整" });
-  }
-
-  const slug = await buildUniqueSlug(title, postId);
-  const isPublished = status === "PUBLISHED";
   const existing = await prisma.post.findUnique({ where: { id: postId } });
 
+  if (!existing) {
+    return res.status(404).json({ message: "文章不存在" });
+  }
+
+  const payload = await buildPostPayload(req.body || {}, postId);
+
+  if (payload.error) {
+    return res.status(400).json({ message: payload.error });
+  }
+
+  const isPublished = payload.status === "PUBLISHED";
   const post = await prisma.post.update({
     where: { id: postId },
     data: {
-      title,
-      slug,
-      excerpt,
-      coverImage: coverImage || null,
-      contentMarkdown,
-      contentHtml: renderMarkdown(contentMarkdown),
-      categoryId: Number(categoryId),
-      status: isPublished ? "PUBLISHED" : "DRAFT",
-      publishedAt: isPublished ? existing?.publishedAt || new Date() : null,
+      title: payload.title,
+      slug: payload.slug,
+      excerpt: payload.excerpt,
+      coverImage: payload.coverImage,
+      contentMarkdown: payload.contentMarkdown,
+      contentHtml: renderMarkdown(payload.contentMarkdown),
+      categoryId: payload.categoryId,
+      status: payload.status,
+      publishedAt: isPublished ? existing.publishedAt || new Date() : null,
     },
   });
 
-  await syncTags(post.id, tags);
+  await syncTags(post.id, payload.tags);
 
-  const fullPost = await prisma.post.findUnique({
-    where: { id: post.id },
-    include: { category: true, postTags: { include: { tag: true } }, comments: true },
+  const fullPost = await fetchFullPost(post.id);
+  await refreshAiArtifacts(fullPost, {
+    generateAiComment: payload.generateAiComment,
   });
 
-  await refreshAiArtifacts(fullPost);
-
-  const finalPost = await prisma.post.findUnique({
-    where: { id: post.id },
-    include: {
-      category: true,
-      postTags: { include: { tag: true } },
-      aiReview: true,
-      aiOfficialComment: true,
-      comments: true,
-    },
-  });
-
+  const finalPost = await fetchFullPost(post.id);
   res.json(mapPost(finalPost));
+});
+
+router.patch("/:id/status", requireAdmin, async (req, res) => {
+  const postId = Number(req.params.id);
+  const status = req.body?.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
+
+  const existing = await prisma.post.findUnique({ where: { id: postId } });
+  if (!existing) {
+    return res.status(404).json({ message: "文章不存在" });
+  }
+
+  const updated = await prisma.post.update({
+    where: { id: postId },
+    data: {
+      status,
+      publishedAt:
+        status === "PUBLISHED" ? existing.publishedAt || new Date() : null,
+    },
+  });
+
+  const fullPost = await fetchFullPost(updated.id);
+  res.json(mapPost(fullPost));
 });
 
 router.delete("/:id", requireAdmin, async (req, res) => {

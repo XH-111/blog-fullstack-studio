@@ -53,13 +53,29 @@ export default function AdminDashboardPage() {
     setPosts((current) => current.filter((item) => item.id !== postId));
   }
 
+  async function handleStatusChange(postId: number, status: "DRAFT" | "PUBLISHED") {
+    if (!token) {
+      return;
+    }
+
+    const updated = await apiFetch<PostRecord>(`/api/posts/${postId}/status`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ status }),
+    });
+
+    setPosts((current) =>
+      current.map((item) => (item.id === postId ? updated : item))
+    );
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-serif text-4xl text-[var(--color-ink)]">内容后台</h1>
           <p className="mt-2 text-sm text-[var(--color-text)]">
-            在这里维护文章、分类、首页图片和 AI 审核结果。当前站点已经补齐 JVM 文章和站点设置能力。
+            在这里管理文章、分类和首页图片。发布和撤回可以直接在列表里操作，AI 审核功能已经移除。
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -103,47 +119,64 @@ export default function AdminDashboardPage() {
       )}
 
       <div className="grid gap-5">
-        {posts.map((post) => (
-          <SurfaceCard key={post.id}>
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="flex flex-wrap gap-2 text-xs text-[var(--color-text-faint)]">
-                  <span>{post.category.name}</span>
-                  <span>{post.status}</span>
-                  <span>{post.commentCount} 条评论</span>
-                </div>
-                <h2 className="mt-3 font-serif text-3xl text-[var(--color-ink)]">
-                  {post.title}
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
-                  {post.excerpt}
-                </p>
-                {post.aiReview && (
-                  <div className="mt-4 rounded-[20px] bg-[var(--color-panel-soft)] p-4 text-sm leading-7 text-[var(--color-text)]">
-                    <p className="font-semibold text-[var(--color-ink)]">AI 审核建议</p>
-                    <p className="mt-2">{post.aiReview.overallSuggestion}</p>
-                  </div>
-                )}
-              </div>
+        {posts.map((post) => {
+          const isPublished = post.status === "PUBLISHED";
 
-              <div className="flex gap-3">
-                <Link
-                  href={`/admin/posts/${post.id}/edit`}
-                  className="rounded-full border border-[var(--color-line)] bg-white/88 px-4 py-2 text-sm"
-                >
-                  编辑
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(post.id)}
-                  className="rounded-full border border-[var(--color-rose)] bg-white px-4 py-2 text-sm text-[#b44a5a]"
-                >
-                  删除
-                </button>
+          return (
+            <SurfaceCard key={post.id}>
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-3xl">
+                  <div className="flex flex-wrap gap-2 text-xs text-[var(--color-text-faint)]">
+                    <span>{post.category.name}</span>
+                    <span>{isPublished ? "已发布" : "草稿"}</span>
+                    <span>{post.commentCount} 条评论</span>
+                  </div>
+                  <h2 className="mt-3 font-serif text-3xl text-[var(--color-ink)]">
+                    {post.title}
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
+                    {post.excerpt}
+                  </p>
+                  {post.aiOfficialComment && (
+                    <div className="mt-4 rounded-[20px] bg-[var(--color-panel-soft)] p-4 text-sm leading-7 text-[var(--color-text)]">
+                      <p className="font-semibold text-[var(--color-ink)]">AI 正确性评论</p>
+                      <p className="mt-2">{post.aiOfficialComment.content}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-3 lg:max-w-[280px] lg:justify-end">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleStatusChange(post.id, isPublished ? "DRAFT" : "PUBLISHED")
+                    }
+                    className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                      isPublished
+                        ? "border border-[var(--color-line)] bg-white text-[var(--color-ink)]"
+                        : "bg-[var(--color-accent)] text-white"
+                    }`}
+                  >
+                    {isPublished ? "撤回为草稿" : "立即发布"}
+                  </button>
+                  <Link
+                    href={`/admin/posts/${post.id}/edit`}
+                    className="rounded-full border border-[var(--color-line)] bg-white/88 px-4 py-2 text-sm"
+                  >
+                    编辑
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(post.id)}
+                    className="rounded-full border border-[var(--color-rose)] bg-white px-4 py-2 text-sm text-[#b44a5a]"
+                  >
+                    删除
+                  </button>
+                </div>
               </div>
-            </div>
-          </SurfaceCard>
-        ))}
+            </SurfaceCard>
+          );
+        })}
       </div>
     </main>
   );
