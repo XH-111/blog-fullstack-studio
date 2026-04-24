@@ -98,7 +98,7 @@ export default function TaxonomiesPage() {
       <div>
         <h1 className="font-serif text-4xl text-[var(--color-ink)]">分类与标签管理</h1>
         <p className="mt-2 text-sm text-[var(--color-text)]">
-          在这里维护文章的分类体系和标签体系。
+          这里可以直接创建新分类和新标签。新建文章时会自动读取这些数据，不需要再手改数据库。
         </p>
       </div>
 
@@ -109,7 +109,7 @@ export default function TaxonomiesPage() {
             <input
               value={newCategory}
               onChange={(event) => setNewCategory(event.target.value)}
-              placeholder="输入分类名"
+              placeholder="例如：JVM 调优、源码拆读、面试总结"
               className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
               required
             />
@@ -124,9 +124,12 @@ export default function TaxonomiesPage() {
             {categories.map((category) => (
               <div
                 key={category.id}
-                className="rounded-[18px] border border-[var(--color-line)] bg-white/88 px-4 py-3 text-sm"
+                className="flex items-center justify-between rounded-[18px] border border-[var(--color-line)] bg-white/88 px-4 py-3 text-sm"
               >
-                {category.name}
+                <span>{category.name}</span>
+                <span className="text-[var(--color-text-faint)]">
+                  {category._count?.posts || 0} 篇
+                </span>
               </div>
             ))}
           </div>
@@ -138,7 +141,7 @@ export default function TaxonomiesPage() {
             <input
               value={newTag}
               onChange={(event) => setNewTag(event.target.value)}
-              placeholder="输入标签名"
+              placeholder="例如：JVM、垃圾回收、类加载"
               className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
               required
             />

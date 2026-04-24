@@ -4,7 +4,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Poetize Studio",
-  description: "高颜值个人博客全站项目，支持后台管理、评论系统、AI 审核与 AI 官方评论。",
+  description:
+    "高颜值个人博客全站项目，支持后台管理、评论系统、AI 审核与 AI 官方评论。",
 };
 
 const navItems = [

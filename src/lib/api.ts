@@ -32,6 +32,42 @@ export async function apiFetch<T>(
   return response.json();
 }
 
+export type CommentRecord = {
+  id: number;
+  authorName: string;
+  email?: string | null;
+  content: string;
+  floor: number;
+  isAi: boolean;
+  createdAt: string;
+};
+
+export type CategoryRecord = {
+  id: number;
+  name: string;
+  slug: string;
+  _count?: { posts: number };
+};
+
+export type TagRecord = {
+  id: number;
+  name: string;
+  slug: string;
+  _count?: { postTags: number };
+};
+
+export type SiteSettingsRecord = {
+  id: string;
+  siteTitle: string;
+  heroTitle: string;
+  heroDescription: string;
+  heroImage?: string | null;
+  profileName: string;
+  profileTagline: string;
+  profileImage?: string | null;
+  updatedAt: string;
+};
+
 export type PostRecord = {
   id: number;
   title: string;
@@ -58,28 +94,4 @@ export type PostRecord = {
   aiOfficialComment?: { content: string } | null;
   commentCount: number;
   comments?: CommentRecord[];
-};
-
-export type CommentRecord = {
-  id: number;
-  authorName: string;
-  email?: string | null;
-  content: string;
-  floor: number;
-  isAi: boolean;
-  createdAt: string;
-};
-
-export type CategoryRecord = {
-  id: number;
-  name: string;
-  slug: string;
-  _count?: { posts: number };
-};
-
-export type TagRecord = {
-  id: number;
-  name: string;
-  slug: string;
-  _count?: { postTags: number };
 };

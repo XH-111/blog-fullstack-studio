@@ -36,7 +36,7 @@ export default function AdminLoginPage() {
       <SurfaceCard className="w-full">
         <h1 className="font-serif text-4xl text-[var(--color-ink)]">后台登录</h1>
         <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
-          默认管理员账号已在数据库种子中创建，可以先直接登录测试。
+          默认管理员账号已经由种子数据自动创建。登录后可以管理文章、分类标签和首页视觉设置。
         </p>
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <input

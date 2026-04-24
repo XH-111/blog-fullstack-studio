@@ -39,6 +39,7 @@ async function syncTags(postId, tagNames) {
   }
 
   await prisma.postTag.deleteMany({ where: { postId } });
+
   if (tags.length > 0) {
     await prisma.postTag.createMany({
       data: tags.map((tag) => ({
@@ -107,7 +108,7 @@ async function refreshAiArtifacts(post) {
     await prisma.comment.create({
       data: {
         postId: post.id,
-        authorName: "AI 官方评论",
+        authorName: "AI 博客助手",
         content: officialComment,
         floor: (lastComment?.floor || 0) + 1,
         isAi: true,
@@ -312,9 +313,7 @@ router.put("/:id", requireAdmin, async (req, res) => {
       contentHtml: renderMarkdown(contentMarkdown),
       categoryId: Number(categoryId),
       status: isPublished ? "PUBLISHED" : "DRAFT",
-      publishedAt: isPublished
-        ? existing?.publishedAt || new Date()
-        : null,
+      publishedAt: isPublished ? existing?.publishedAt || new Date() : null,
     },
   });
 
@@ -345,6 +344,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
   await prisma.post.delete({
     where: { id: Number(req.params.id) },
   });
+
   res.json({ success: true });
 });
 

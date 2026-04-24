@@ -14,27 +14,36 @@ router.get("/", async (_req, res) => {
       },
     },
   });
+
   res.json(tags);
 });
 
 router.post("/", requireAdmin, async (req, res) => {
   const { name } = req.body || {};
-  if (!name) {
+
+  if (!name || !String(name).trim()) {
     return res.status(400).json({ message: "标签名称不能为空" });
   }
 
-  const slug = toSlug(name);
-  const existed = await prisma.tag.findUnique({ where: { slug } });
+  const normalizedName = String(name).trim();
+  const slug = toSlug(normalizedName);
+  const existed = await prisma.tag.findFirst({
+    where: {
+      OR: [{ slug }, { name: normalizedName }],
+    },
+  });
+
   if (existed) {
-    return res.status(409).json({ message: "标签已存在" });
+    return res.status(409).json({ message: "这个标签已经存在了" });
   }
 
   const tag = await prisma.tag.create({
     data: {
-      name,
+      name: normalizedName,
       slug,
     },
   });
+
   res.json(tag);
 });
 

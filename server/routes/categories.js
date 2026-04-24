@@ -14,24 +14,33 @@ router.get("/", async (_req, res) => {
       },
     },
   });
+
   res.json(categories);
 });
 
 router.post("/", requireAdmin, async (req, res) => {
   const { name } = req.body || {};
-  if (!name) {
+
+  if (!name || !String(name).trim()) {
     return res.status(400).json({ message: "分类名称不能为空" });
   }
 
-  const slug = toSlug(name);
-  const existed = await prisma.category.findUnique({ where: { slug } });
+  const normalizedName = String(name).trim();
+  const slug = toSlug(normalizedName);
+
+  const existed = await prisma.category.findFirst({
+    where: {
+      OR: [{ slug }, { name: normalizedName }],
+    },
+  });
+
   if (existed) {
-    return res.status(409).json({ message: "分类已存在" });
+    return res.status(409).json({ message: "这个分类已经存在了" });
   }
 
   const category = await prisma.category.create({
     data: {
-      name,
+      name: normalizedName,
       slug,
     },
   });

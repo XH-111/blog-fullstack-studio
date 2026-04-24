@@ -11,6 +11,7 @@ const commentRoutes = require("./routes/comments");
 const categoryRoutes = require("./routes/categories");
 const tagRoutes = require("./routes/tags");
 const dashboardRoutes = require("./routes/dashboard");
+const settingsRoutes = require("./routes/settings");
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/tags", tagRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/settings", settingsRoutes);
 
 app.use((error, _req, res, _next) => {
   console.error(error);

@@ -59,10 +59,16 @@ export default function AdminDashboardPage() {
         <div>
           <h1 className="font-serif text-4xl text-[var(--color-ink)]">内容后台</h1>
           <p className="mt-2 text-sm text-[var(--color-text)]">
-            支持在线发布、修改、删除文章，并查看 AI 审核结果与官方评论。
+            在这里维护文章、分类、首页图片和 AI 审核结果。当前站点已经补齐 JVM 文章和站点设置能力。
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/settings"
+            className="rounded-full border border-[var(--color-line)] bg-white/88 px-5 py-2.5 text-sm"
+          >
+            站点设置
+          </Link>
           <Link
             href="/admin/taxonomies"
             className="rounded-full border border-[var(--color-line)] bg-white/88 px-5 py-2.5 text-sm"
@@ -104,7 +110,7 @@ export default function AdminDashboardPage() {
                 <div className="flex flex-wrap gap-2 text-xs text-[var(--color-text-faint)]">
                   <span>{post.category.name}</span>
                   <span>{post.status}</span>
-                  <span>{post.commentCount} 评论</span>
+                  <span>{post.commentCount} 条评论</span>
                 </div>
                 <h2 className="mt-3 font-serif text-3xl text-[var(--color-ink)]">
                   {post.title}

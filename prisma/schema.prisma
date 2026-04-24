@@ -16,6 +16,18 @@ model User {
   updatedAt    DateTime @updatedAt
 }
 
+model SiteSetting {
+  id              String   @id @default("site")
+  siteTitle       String
+  heroTitle       String
+  heroDescription String
+  heroImage       String?
+  profileName     String
+  profileTagline  String
+  profileImage    String?
+  updatedAt       DateTime @updatedAt
+}
+
 model Category {
   id        Int      @id @default(autoincrement())
   name      String   @unique

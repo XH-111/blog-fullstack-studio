@@ -1,0 +1,244 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch, SiteSettingsRecord } from "@/lib/api";
+import { SurfaceCard } from "@/components/surface-card";
+
+const emptySettings: SiteSettingsRecord = {
+  id: "site",
+  siteTitle: "",
+  heroTitle: "",
+  heroDescription: "",
+  heroImage: "",
+  profileName: "",
+  profileTagline: "",
+  profileImage: "",
+  updatedAt: new Date().toISOString(),
+};
+
+export default function AdminSettingsPage() {
+  const router = useRouter();
+  const [token] = useState(
+    () =>
+      (typeof window !== "undefined" &&
+        localStorage.getItem("blog_admin_token")) ||
+      ""
+  );
+  const [form, setForm] = useState<SiteSettingsRecord>(emptySettings);
+  const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      router.push("/admin/login");
+      return;
+    }
+
+    apiFetch<SiteSettingsRecord>("/api/settings")
+      .then((settings) => setForm(settings))
+      .catch((error) => {
+        setMessage(error instanceof Error ? error.message : "加载站点设置失败");
+      });
+  }, [router, token]);
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setIsSaving(true);
+    setMessage("");
+
+    try {
+      const payload = {
+        siteTitle: form.siteTitle,
+        heroTitle: form.heroTitle,
+        heroDescription: form.heroDescription,
+        heroImage: form.heroImage,
+        profileName: form.profileName,
+        profileTagline: form.profileTagline,
+        profileImage: form.profileImage,
+      };
+
+      const updated = await apiFetch<SiteSettingsRecord>("/api/settings", {
+        method: "PUT",
+        token,
+        body: JSON.stringify(payload),
+      });
+
+      setForm(updated);
+      setMessage("站点设置已保存");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "保存站点设置失败");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8">
+      <div>
+        <h1 className="font-serif text-4xl text-[var(--color-ink)]">站点设置</h1>
+        <p className="mt-2 text-sm text-[var(--color-text)]">
+          这里可以直接修改首页主视觉图片、个人照片、主标题和简介。保存后首页会立即读取新配置。
+        </p>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <SurfaceCard>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>站点标题</span>
+                <input
+                  value={form.siteTitle}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, siteTitle: event.target.value }))
+                  }
+                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+              </label>
+
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>个人姓名</span>
+                <input
+                  value={form.profileName}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, profileName: event.target.value }))
+                  }
+                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+              </label>
+            </div>
+
+            <label className="space-y-2 text-sm text-[var(--color-text)]">
+              <span>首页主标题</span>
+              <input
+                value={form.heroTitle}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, heroTitle: event.target.value }))
+                }
+                className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+              />
+            </label>
+
+            <label className="space-y-2 text-sm text-[var(--color-text)]">
+              <span>首页描述</span>
+              <textarea
+                value={form.heroDescription}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    heroDescription: event.target.value,
+                  }))
+                }
+                className="min-h-[120px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+              />
+            </label>
+
+            <label className="space-y-2 text-sm text-[var(--color-text)]">
+              <span>个人一句话简介</span>
+              <input
+                value={form.profileTagline}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    profileTagline: event.target.value,
+                  }))
+                }
+                className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+              />
+            </label>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>首页背景图 URL</span>
+                <input
+                  value={form.heroImage || ""}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, heroImage: event.target.value }))
+                  }
+                  placeholder="https://..."
+                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+              </label>
+
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>个人照片 URL</span>
+                <input
+                  value={form.profileImage || ""}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, profileImage: event.target.value }))
+                  }
+                  placeholder="https://..."
+                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-[var(--color-text-faint)]">{message}</span>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="rounded-full bg-[var(--color-accent)] px-6 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {isSaving ? "保存中..." : "保存设置"}
+              </button>
+            </div>
+          </form>
+        </SurfaceCard>
+
+        <SurfaceCard className="overflow-hidden">
+          <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent)]">
+            预览
+          </p>
+          <div
+            className="mt-4 rounded-[24px] bg-cover bg-center p-5"
+            style={{
+              backgroundImage: `linear-gradient(180deg, rgba(17, 33, 41, 0.26), rgba(17, 33, 41, 0.5)), url(${
+                form.heroImage ||
+                "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1800&q=80"
+              })`,
+            }}
+          >
+            <div className="rounded-[24px] bg-white/78 p-5 backdrop-blur-sm">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 overflow-hidden rounded-full border-4 border-white bg-white">
+                  {form.profileImage ? (
+                    <div
+                      aria-label={form.profileName}
+                      title={form.profileName}
+                      className="h-full w-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${form.profileImage})` }}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[var(--color-accent-soft)] text-xl font-semibold text-[var(--color-accent)]">
+                      {form.profileName.slice(0, 2) || "HX"}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="font-serif text-2xl text-[var(--color-ink)]">
+                    {form.siteTitle || "POETIZE"}
+                  </p>
+                  <p className="text-sm text-[var(--color-text)]">
+                    {form.profileName || "何晨旭"}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-5 font-serif text-3xl leading-tight text-[var(--color-ink)]">
+                {form.heroTitle || "生活与技术的温柔归档"}
+              </p>
+              <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
+                {form.heroDescription ||
+                  "长期记录 Java、JVM、工程实践与个人项目，把技术写成可以反复回看的作品。"}
+              </p>
+              <p className="mt-4 text-sm text-[var(--color-text-faint)]">
+                {form.profileTagline || "后端开发 / Java 工程实践 / 长期写作者"}
+              </p>
+            </div>
+          </div>
+        </SurfaceCard>
+      </div>
+    </main>
+  );
+}
