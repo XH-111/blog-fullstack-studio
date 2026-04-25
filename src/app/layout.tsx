@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Poetize Studio",
-  description: "个人博客全栈项目，支持后台管理、评论系统、Markdown 写作和可选 AI 正确性评论。",
+  description: "个人博客全栈项目，支持后台管理、评论系统、富文本写作和留言板。",
 };
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/search", label: "搜索" },
   { href: "/archives", label: "归档" },
   { href: "/about", label: "关于我" },
+  { href: "/guestbook", label: "留言板" },
   { href: "/admin/login", label: "后台登录" },
 ];
 

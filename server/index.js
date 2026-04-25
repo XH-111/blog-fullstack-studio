@@ -12,6 +12,7 @@ const categoryRoutes = require("./routes/categories");
 const tagRoutes = require("./routes/tags");
 const dashboardRoutes = require("./routes/dashboard");
 const settingsRoutes = require("./routes/settings");
+const guestbookRoutes = require("./routes/guestbook");
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/tags", tagRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/guestbook", guestbookRoutes);
 
 app.use((error, _req, res, _next) => {
   console.error(error);

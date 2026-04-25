@@ -42,6 +42,17 @@ export type CommentRecord = {
   createdAt: string;
 };
 
+export type GuestbookMessageRecord = {
+  id: number;
+  authorName: string;
+  content: string;
+  isPrivate: boolean;
+  replyContent?: string | null;
+  repliedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CategoryRecord = {
   id: number;
   name: string;
