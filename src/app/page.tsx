@@ -10,16 +10,8 @@ import {
 } from "@/lib/api";
 import { PageHero } from "@/components/page-hero";
 import { SurfaceCard } from "@/components/surface-card";
+import { resolveCoverImage } from "@/lib/cover-image";
 import { pastelChips } from "@/lib/theme";
-
-const featureLabels = [
-  "简洁首页",
-  "后台写作",
-  "分类管理",
-  "Markdown 编辑",
-  "AI 正确性评论",
-  "JVM 专栏",
-];
 
 const fallbackSettings: SiteSettingsRecord = {
   id: "site",
@@ -29,7 +21,12 @@ const fallbackSettings: SiteSettingsRecord = {
     "长期记录 Java、JVM、工程实践与个人项目，把技术写成可以反复回看的作品。",
   heroImage:
     "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1800&q=80",
-  profileName: "何晨旭",
+  welcomeEyebrow: "欢迎光临",
+  welcomeTitle: "一套可以长期写作、持续扩展、适合沉淀技术与生活的个人博客",
+  welcomeBody:
+    "这里会持续更新 Java、JVM、后端工程实践、项目复盘和个人成长记录。它不是只展示结果的站点，而是一份长期可读的个人工程档案。",
+  welcomeTags: "简洁首页,后台写作,分类管理,Markdown 编辑,AI 正确性评论,JVM 专栏",
+  profileName: "何醒辉",
   profileTagline: "后端开发 / Java 工程实践 / 长期写作者",
   profileImage:
     "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
@@ -39,6 +36,13 @@ const fallbackSettings: SiteSettingsRecord = {
 function getProfileInitials(name: string) {
   const cleaned = name.replace(/\s+/g, "");
   return cleaned.slice(0, 2).toUpperCase() || "HX";
+}
+
+function splitWelcomeTags(value: string) {
+  return value
+    .split(/[,，\n]/)
+    .map((label) => label.trim())
+    .filter(Boolean);
 }
 
 export default function HomePage() {
@@ -76,6 +80,7 @@ export default function HomePage() {
 
   const totalViews = posts.reduce((sum, item) => sum + item.viewCount, 0);
   const featuredCategories = categories.slice(0, 6);
+  const welcomeTags = splitWelcomeTags(settings.welcomeTags || fallbackSettings.welcomeTags);
 
   return (
     <main className="flex flex-1 flex-col pb-20">
@@ -176,12 +181,14 @@ export default function HomePage() {
             <SurfaceCard>
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-accent)]">欢迎光临</p>
+                  <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-accent)]">
+                    {settings.welcomeEyebrow}
+                  </p>
                   <h2 className="mt-3 font-serif text-4xl text-[var(--color-ink)]">
-                    一套可以长期写作、持续扩展、适合沉淀技术与生活的个人博客
+                    {settings.welcomeTitle}
                   </h2>
                   <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--color-text)]">
-                    这里会持续更新 Java、JVM、后端工程实践、项目复盘和个人成长记录。它不是只展示结果的站点，而是一份长期可读的个人工程档案。
+                    {settings.welcomeBody}
                   </p>
                 </div>
                 <Link href="/archives" className="rounded-full bg-[var(--color-accent)]/10 px-4 py-2 text-sm text-[var(--color-accent)]">
@@ -190,9 +197,9 @@ export default function HomePage() {
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
-                {featureLabels.map((label, index) => (
+                {welcomeTags.map((label, index) => (
                   <span
-                    key={label}
+                    key={`${label}-${index}`}
                     className="rounded-full px-4 py-2 text-xs font-medium text-[var(--color-ink)]"
                     style={{ backgroundColor: pastelChips[index % pastelChips.length] }}
                   >
@@ -212,10 +219,7 @@ export default function HomePage() {
                   <div
                     className="h-40 w-full bg-cover bg-center"
                     style={{
-                      backgroundImage: `url(${
-                        post.coverImage ||
-                        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80"
-                      })`,
+                      backgroundImage: `url(${resolveCoverImage(post.coverImage)})`,
                     }}
                   />
                   <div className="p-5">

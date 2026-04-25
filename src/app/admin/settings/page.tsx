@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, SiteSettingsRecord } from "@/lib/api";
 import { SurfaceCard } from "@/components/surface-card";
+import { pastelChips } from "@/lib/theme";
 
 const emptySettings: SiteSettingsRecord = {
   id: "site",
@@ -11,11 +12,22 @@ const emptySettings: SiteSettingsRecord = {
   heroTitle: "",
   heroDescription: "",
   heroImage: "",
+  welcomeEyebrow: "欢迎光临",
+  welcomeTitle: "",
+  welcomeBody: "",
+  welcomeTags: "",
   profileName: "",
   profileTagline: "",
   profileImage: "",
   updatedAt: new Date().toISOString(),
 };
+
+function splitWelcomeTags(value: string) {
+  return value
+    .split(/[,，\n]/)
+    .map((label) => label.trim())
+    .filter(Boolean);
+}
 
 export default function AdminSettingsPage() {
   const router = useRouter();
@@ -36,7 +48,7 @@ export default function AdminSettingsPage() {
     }
 
     apiFetch<SiteSettingsRecord>("/api/settings")
-      .then((settings) => setForm(settings))
+      .then((settings) => setForm({ ...emptySettings, ...settings }))
       .catch((error) => {
         setMessage(error instanceof Error ? error.message : "加载站点设置失败");
       });
@@ -79,6 +91,10 @@ export default function AdminSettingsPage() {
         heroTitle: form.heroTitle,
         heroDescription: form.heroDescription,
         heroImage: form.heroImage,
+        welcomeEyebrow: form.welcomeEyebrow,
+        welcomeTitle: form.welcomeTitle,
+        welcomeBody: form.welcomeBody,
+        welcomeTags: form.welcomeTags,
         profileName: form.profileName,
         profileTagline: form.profileTagline,
         profileImage: form.profileImage,
@@ -90,7 +106,7 @@ export default function AdminSettingsPage() {
         body: JSON.stringify(payload),
       });
 
-      setForm(updated);
+      setForm({ ...emptySettings, ...updated });
       setMessage("站点设置已保存");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存站点设置失败");
@@ -99,66 +115,72 @@ export default function AdminSettingsPage() {
     }
   }
 
+  const previewTags = splitWelcomeTags(form.welcomeTags);
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8">
       <div>
         <h1 className="font-serif text-4xl text-[var(--color-ink)]">站点设置</h1>
         <p className="mt-2 text-sm text-[var(--color-text)]">
-          修改首页主视觉图片、个人头像、主标题和简介。头像支持直接从本地选择图片上传。
+          修改首页主视觉、个人信息和首页欢迎卡片内容。头像支持直接从本地选择图片。
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <SurfaceCard>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <section className="space-y-4">
+              <h2 className="font-serif text-2xl text-[var(--color-ink)]">站点信息</h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="space-y-2 text-sm text-[var(--color-text)]">
+                  <span>站点标题</span>
+                  <input
+                    value={form.siteTitle}
+                    onChange={(event) => setForm((current) => ({ ...current, siteTitle: event.target.value }))}
+                    className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm text-[var(--color-text)]">
+                  <span>个人姓名</span>
+                  <input
+                    value={form.profileName}
+                    onChange={(event) => setForm((current) => ({ ...current, profileName: event.target.value }))}
+                    className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                  />
+                </label>
+              </div>
+
               <label className="space-y-2 text-sm text-[var(--color-text)]">
-                <span>站点标题</span>
+                <span>个人一句话简介</span>
                 <input
-                  value={form.siteTitle}
-                  onChange={(event) => setForm((current) => ({ ...current, siteTitle: event.target.value }))}
+                  value={form.profileTagline}
+                  onChange={(event) => setForm((current) => ({ ...current, profileTagline: event.target.value }))}
+                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+              </label>
+            </section>
+
+            <section className="space-y-4">
+              <h2 className="font-serif text-2xl text-[var(--color-ink)]">顶部主视觉</h2>
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>首页主标题</span>
+                <input
+                  value={form.heroTitle}
+                  onChange={(event) => setForm((current) => ({ ...current, heroTitle: event.target.value }))}
                   className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
                 />
               </label>
 
               <label className="space-y-2 text-sm text-[var(--color-text)]">
-                <span>个人姓名</span>
-                <input
-                  value={form.profileName}
-                  onChange={(event) => setForm((current) => ({ ...current, profileName: event.target.value }))}
-                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                <span>首页描述</span>
+                <textarea
+                  value={form.heroDescription}
+                  onChange={(event) => setForm((current) => ({ ...current, heroDescription: event.target.value }))}
+                  className="min-h-[110px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
                 />
               </label>
-            </div>
 
-            <label className="space-y-2 text-sm text-[var(--color-text)]">
-              <span>首页主标题</span>
-              <input
-                value={form.heroTitle}
-                onChange={(event) => setForm((current) => ({ ...current, heroTitle: event.target.value }))}
-                className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm text-[var(--color-text)]">
-              <span>首页描述</span>
-              <textarea
-                value={form.heroDescription}
-                onChange={(event) => setForm((current) => ({ ...current, heroDescription: event.target.value }))}
-                className="min-h-[120px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
-              />
-            </label>
-
-            <label className="space-y-2 text-sm text-[var(--color-text)]">
-              <span>个人一句话简介</span>
-              <input
-                value={form.profileTagline}
-                onChange={(event) => setForm((current) => ({ ...current, profileTagline: event.target.value }))}
-                className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
-              />
-            </label>
-
-            <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2 text-sm text-[var(--color-text)]">
                 <span>首页背景图 URL</span>
                 <input
@@ -168,7 +190,53 @@ export default function AdminSettingsPage() {
                   className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
                 />
               </label>
+            </section>
 
+            <section className="space-y-4">
+              <h2 className="font-serif text-2xl text-[var(--color-ink)]">首页欢迎卡片</h2>
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>小标题</span>
+                <input
+                  value={form.welcomeEyebrow}
+                  onChange={(event) => setForm((current) => ({ ...current, welcomeEyebrow: event.target.value }))}
+                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+              </label>
+
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>欢迎主标题</span>
+                <input
+                  value={form.welcomeTitle}
+                  onChange={(event) => setForm((current) => ({ ...current, welcomeTitle: event.target.value }))}
+                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+              </label>
+
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>欢迎正文</span>
+                <textarea
+                  value={form.welcomeBody}
+                  onChange={(event) => setForm((current) => ({ ...current, welcomeBody: event.target.value }))}
+                  className="min-h-[110px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+              </label>
+
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>标签列表</span>
+                <textarea
+                  value={form.welcomeTags}
+                  onChange={(event) => setForm((current) => ({ ...current, welcomeTags: event.target.value }))}
+                  placeholder="简洁首页, 后台写作, 分类管理"
+                  className="min-h-[88px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+                <span className="block text-xs text-[var(--color-text-faint)]">
+                  支持用中文逗号、英文逗号或换行分隔。
+                </span>
+              </label>
+            </section>
+
+            <section className="space-y-4">
+              <h2 className="font-serif text-2xl text-[var(--color-ink)]">头像</h2>
               <div className="space-y-2 text-sm text-[var(--color-text)]">
                 <span>个人头像</span>
                 <input
@@ -193,7 +261,7 @@ export default function AdminSettingsPage() {
                   </button>
                 </div>
               </div>
-            </div>
+            </section>
 
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-[var(--color-text-faint)]">{message}</span>
@@ -237,19 +305,32 @@ export default function AdminSettingsPage() {
                 </div>
                 <div>
                   <p className="font-serif text-2xl text-[var(--color-ink)]">{form.siteTitle || "POETIZE"}</p>
-                  <p className="text-sm text-[var(--color-text)]">{form.profileName || "何晨旭"}</p>
+                  <p className="text-sm text-[var(--color-text)]">{form.profileName || "何醒辉"}</p>
                 </div>
               </div>
-              <p className="mt-5 font-serif text-3xl leading-tight text-[var(--color-ink)]">
-                {form.heroTitle || "生活与技术的温柔归档"}
-              </p>
-              <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
-                {form.heroDescription ||
-                  "长期记录 Java、JVM、工程实践与个人项目，把技术写成可以反复回看的作品。"}
-              </p>
-              <p className="mt-4 text-sm text-[var(--color-text-faint)]">
-                {form.profileTagline || "后端开发 / Java 工程实践 / 长期写作者"}
-              </p>
+
+              <div className="mt-6 rounded-[22px] bg-white/76 p-4">
+                <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent)]">
+                  {form.welcomeEyebrow || "欢迎光临"}
+                </p>
+                <p className="mt-3 font-serif text-2xl leading-tight text-[var(--color-ink)]">
+                  {form.welcomeTitle || "首页欢迎主标题"}
+                </p>
+                <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
+                  {form.welcomeBody || "首页欢迎正文会显示在这里。"}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {previewTags.map((label, index) => (
+                    <span
+                      key={`${label}-${index}`}
+                      className="rounded-full px-3 py-1.5 text-xs text-[var(--color-ink)]"
+                      style={{ backgroundColor: pastelChips[index % pastelChips.length] }}
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </SurfaceCard>

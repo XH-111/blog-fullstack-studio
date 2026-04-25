@@ -3,10 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiFetch, PostRecord } from "@/lib/api";
+import { resolveCoverImage } from "@/lib/cover-image";
 import { CommentForm } from "@/components/comment-form";
-
-const fallbackCover =
-  "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1800&q=80";
 
 export default function PostDetailPage() {
   const params = useParams<{ slug: string }>();
@@ -70,7 +68,7 @@ export default function PostDetailPage() {
         className="relative min-h-[520px] bg-cover bg-center px-4 pt-20"
         style={{
           backgroundImage: `linear-gradient(180deg, rgba(31,28,36,0.18), rgba(247,243,239,0.88)), url(${
-            post.coverImage || fallbackCover
+            resolveCoverImage(post.coverImage)
           })`,
         }}
       >

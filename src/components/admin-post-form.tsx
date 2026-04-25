@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { JSONContent } from "@tiptap/react";
 import { useRouter } from "next/navigation";
 import { apiFetch, CategoryRecord, PostRecord, TagRecord } from "@/lib/api";
+import { defaultCoverImage, getEditableCoverImage } from "@/lib/cover-image";
 import { RichTextEditor } from "@/components/rich-text-editor";
 
 type AdminPostFormProps = {
@@ -17,11 +18,12 @@ type SaveState = "idle" | "saving-draft" | "saving-published";
 
 export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) {
   const router = useRouter();
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [tags, setTags] = useState<TagRecord[]>([]);
   const [title, setTitle] = useState(initialPost?.title || "");
   const [excerpt, setExcerpt] = useState(initialPost?.excerpt || "");
-  const [coverImage, setCoverImage] = useState(initialPost?.coverImage || "");
+  const [coverImage, setCoverImage] = useState(getEditableCoverImage(initialPost?.coverImage));
   const [contentJson, setContentJson] = useState<string | null>(
     initialPost?.contentJson || null
   );
@@ -33,33 +35,58 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
   const [selectedTags, setSelectedTags] = useState<string[]>(
     initialPost?.tags.map((tag) => tag.name) || []
   );
+  const [tagSelectId, setTagSelectId] = useState("");
+  const [newTagName, setNewTagName] = useState("");
   const [generateAiComment, setGenerateAiComment] = useState(
     Boolean(initialPost?.aiOfficialComment)
   );
   const [message, setMessage] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
-  useEffect(() => {
-    async function loadMeta() {
-      const [categoryList, tagList] = await Promise.all([
-        apiFetch<CategoryRecord[]>("/api/categories"),
-        apiFetch<TagRecord[]>("/api/tags"),
-      ]);
-      setCategories(categoryList);
-      setTags(tagList);
+  async function loadMeta() {
+    const [categoryList, tagList] = await Promise.all([
+      apiFetch<CategoryRecord[]>("/api/categories"),
+      apiFetch<TagRecord[]>("/api/tags"),
+    ]);
+    setCategories(categoryList);
+    setTags(tagList);
 
-      if (!initialPost?.category.id && categoryList[0]) {
-        setCategoryId(categoryList[0].id);
-      }
+    if (!initialPost?.category.id && categoryList[0]) {
+      setCategoryId(categoryList[0].id);
     }
+  }
 
-    loadMeta().catch((error) => {
-      setMessage(error instanceof Error ? error.message : "元数据加载失败");
-    });
+  useEffect(() => {
+    let alive = true;
+
+    Promise.all([
+      apiFetch<CategoryRecord[]>("/api/categories"),
+      apiFetch<TagRecord[]>("/api/tags"),
+    ])
+      .then(([categoryList, tagList]) => {
+        if (!alive) {
+          return;
+        }
+        setCategories(categoryList);
+        setTags(tagList);
+
+        if (!initialPost?.category.id && categoryList[0]) {
+          setCategoryId(categoryList[0].id);
+        }
+      })
+      .catch((error) => {
+        if (alive) {
+          setMessage(error instanceof Error ? error.message : "元数据加载失败");
+        }
+      });
+
+    return () => {
+      alive = false;
+    };
   }, [initialPost?.category.id]);
 
-  const tagInput = useMemo(() => selectedTags.join(", "), [selectedTags]);
   const isPublished = initialPost?.status === "PUBLISHED";
+  const selectedTagRecord = tags.find((tag) => String(tag.id) === tagSelectId);
 
   const handleEditorChange = useCallback(
     (value: { json: JSONContent | null; html: string; text: string }) => {
@@ -69,6 +96,86 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
     },
     []
   );
+
+  function handleCoverChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setCoverImage(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  }
+
+  function addSelectedTag(name: string) {
+    const normalizedName = name.trim();
+    if (!normalizedName || selectedTags.includes(normalizedName)) {
+      return;
+    }
+    setSelectedTags((current) => [...current, normalizedName]);
+  }
+
+  async function handleAddExistingTag() {
+    if (!selectedTagRecord) {
+      return;
+    }
+    addSelectedTag(selectedTagRecord.name);
+    setTagSelectId("");
+  }
+
+  async function handleCreateTag(event: FormEvent) {
+    event.preventDefault();
+    const normalizedName = newTagName.trim();
+    if (!normalizedName) {
+      return;
+    }
+
+    try {
+      const existed = tags.find((tag) => tag.name === normalizedName);
+      if (!existed) {
+        await apiFetch<TagRecord>("/api/tags", {
+          method: "POST",
+          token,
+          body: JSON.stringify({ name: normalizedName }),
+        });
+        await loadMeta();
+      }
+      addSelectedTag(normalizedName);
+      setNewTagName("");
+      setMessage("");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "创建标签失败");
+    }
+  }
+
+  async function handleDeleteSelectedGlobalTag() {
+    if (!selectedTagRecord) {
+      return;
+    }
+
+    if (!window.confirm(`删除标签「${selectedTagRecord.name}」？已被文章使用的标签不会被删除。`)) {
+      return;
+    }
+
+    try {
+      await apiFetch(`/api/tags/${selectedTagRecord.id}`, {
+        method: "DELETE",
+        token,
+      });
+      setSelectedTags((current) => current.filter((name) => name !== selectedTagRecord.name));
+      setTagSelectId("");
+      await loadMeta();
+      setMessage("标签已删除");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "删除标签失败");
+    }
+  }
 
   async function handleSubmit(nextStatus: "DRAFT" | "PUBLISHED") {
     setSaveState(nextStatus === "PUBLISHED" ? "saving-published" : "saving-draft");
@@ -120,7 +227,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
               href="/admin"
               className="rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-2 text-sm font-medium text-[var(--color-ink)]"
             >
-              ← 返回后台
+              返回后台
             </Link>
             <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">
               Word Style Editor
@@ -150,25 +257,44 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
               <h2 className="mt-2 font-serif text-2xl text-[var(--color-ink)]">文档属性</h2>
 
               <div className="mt-6 space-y-5">
-                <label className="block space-y-2 text-sm text-[var(--color-text)]">
+                <section className="space-y-2 text-sm text-[var(--color-text)]">
                   <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
                     Cover Image
                   </span>
-                  <div
-                    className="aspect-[16/9] rounded-[8px] border border-[#d6d9de] bg-white bg-cover bg-center"
-                    style={{
-                      backgroundImage: coverImage
-                        ? `url(${coverImage})`
-                        : "linear-gradient(135deg, #ffffff, #eef2f7)",
-                    }}
+                  <button
+                    type="button"
+                    data-testid="cover-picker"
+                    onClick={() => coverInputRef.current?.click()}
+                    className="block aspect-[16/9] w-full rounded-[8px] border border-[#d6d9de] bg-white bg-cover bg-center text-left"
+                    style={{ backgroundImage: `url(${coverImage || defaultCoverImage})` }}
+                    aria-label="选择封面图"
                   />
                   <input
-                    value={coverImage}
-                    onChange={(event) => setCoverImage(event.target.value)}
-                    placeholder="封面图 URL"
-                    className="w-full rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-3 text-sm outline-none"
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="absolute -left-[9999px] h-px w-px opacity-0 pointer-events-none"
+                    onChange={handleCoverChange}
                   />
-                </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => coverInputRef.current?.click()}
+                      className="rounded-[6px] bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white"
+                    >
+                      选择封面
+                    </button>
+                    {coverImage && (
+                      <button
+                        type="button"
+                        onClick={() => setCoverImage("")}
+                        className="rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-2 text-xs text-[var(--color-text)]"
+                      >
+                        使用默认
+                      </button>
+                    )}
+                  </div>
+                </section>
 
                 <label className="block space-y-2 text-sm text-[var(--color-text)]">
                   <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
@@ -187,40 +313,75 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                   </select>
                 </label>
 
-                <label className="block space-y-2 text-sm text-[var(--color-text)]">
+                <section className="space-y-3 text-sm text-[var(--color-text)]">
                   <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
                     Relevant Tags
                   </span>
-                  <input
-                    value={tagInput}
-                    onChange={(event) =>
-                      setSelectedTags(
-                        event.target.value
-                          .split(",")
-                          .map((item) => item.trim())
-                          .filter(Boolean)
-                      )
-                    }
-                    placeholder="标签，多个用逗号分隔"
-                    className="w-full rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-3 text-sm outline-none"
-                  />
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
+                    <select
+                      data-testid="tag-select"
+                      value={tagSelectId}
+                      onChange={(event) => setTagSelectId(event.target.value)}
+                      className="min-w-0 rounded-[6px] border border-[#cfd4dc] bg-white px-3 py-2 text-sm outline-none"
+                    >
+                      <option value="">选择已有标签</option>
+                      {tags.map((tag) => (
+                        <option key={tag.id} value={tag.id}>
+                          {tag.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      data-testid="tag-add"
+                      onClick={() => void handleAddExistingTag()}
+                      disabled={!selectedTagRecord}
+                      className="rounded-[6px] bg-[var(--color-accent)] px-3 py-2 text-xs font-semibold text-white disabled:opacity-45"
+                    >
+                      加入
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="tag-delete-global"
+                      onClick={() => void handleDeleteSelectedGlobalTag()}
+                      disabled={!selectedTagRecord}
+                      className="rounded-[6px] border border-[#cfd4dc] bg-white px-3 py-2 text-xs text-[var(--color-text)] disabled:opacity-45"
+                    >
+                      删除
+                    </button>
+                  </div>
+                  <form onSubmit={handleCreateTag} className="flex gap-2">
+                    <input
+                      data-testid="tag-input"
+                      value={newTagName}
+                      onChange={(event) => setNewTagName(event.target.value)}
+                      placeholder="输入新标签后回车"
+                      className="min-w-0 flex-1 rounded-[6px] border border-[#cfd4dc] bg-white px-3 py-2 text-sm outline-none"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-[6px] border border-[#cfd4dc] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-ink)]"
+                    >
+                      新建
+                    </button>
+                  </form>
                   <div className="flex flex-wrap gap-2">
-                    {tags.slice(0, 10).map((tag) => (
+                    {selectedTags.map((tagName) => (
                       <button
-                        key={tag.id}
+                        key={tagName}
                         type="button"
-                        onClick={() => {
-                          if (!selectedTags.includes(tag.name)) {
-                            setSelectedTags([...selectedTags, tag.name]);
-                          }
-                        }}
+                        onClick={() =>
+                          setSelectedTags((current) =>
+                            current.filter((name) => name !== tagName)
+                          )
+                        }
                         className="rounded-[6px] border border-[#cfd4dc] bg-white px-3 py-1 text-xs text-[var(--color-text)]"
                       >
-                        {tag.name}
+                        {tagName} ×
                       </button>
                     ))}
                   </div>
-                </label>
+                </section>
 
                 <label className="block space-y-2 text-sm text-[var(--color-text)]">
                   <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
@@ -243,10 +404,6 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                     className="h-4 w-4 accent-[var(--color-accent)]"
                   />
                 </label>
-
-                <div className="rounded-[8px] border border-[#d6d9de] bg-white p-4 text-xs leading-6 text-[var(--color-text-faint)]">
-                  摘要为空时会自动补充。正文保存为富文本 JSON、HTML 和纯文本，前台展示使用 HTML。
-                </div>
               </div>
 
               <div className="mt-6 flex flex-col gap-3">

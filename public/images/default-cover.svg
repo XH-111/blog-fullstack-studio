@@ -1,0 +1,17 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#0f4c81"/>
+  <path d="M0 0H1280V720H0V0Z" fill="url(#grid)"/>
+  <rect x="355" y="145" width="570" height="350" rx="28" fill="#dbeafe" stroke="#eff6ff" stroke-width="18"/>
+  <rect x="395" y="185" width="490" height="270" rx="10" fill="#1d4ed8"/>
+  <path d="M430 238H850M430 292H850M430 346H850M430 400H850" stroke="#93c5fd" stroke-width="8" stroke-linecap="round"/>
+  <path d="M536 530H744L790 612H490L536 530Z" fill="#bfdbfe"/>
+  <rect x="455" y="612" width="370" height="26" rx="13" fill="#eff6ff"/>
+  <circle cx="474" cy="224" r="13" fill="#38bdf8"/>
+  <circle cx="524" cy="224" r="13" fill="#60a5fa"/>
+  <circle cx="574" cy="224" r="13" fill="#93c5fd"/>
+  <defs>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" stroke="#60a5fa" stroke-opacity="0.28" stroke-width="2"/>
+    </pattern>
+  </defs>
+</svg>

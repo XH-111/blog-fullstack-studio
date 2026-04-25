@@ -147,8 +147,7 @@ async function main() {
       title: "欢迎来到全栈博客项目",
       excerpt:
         "这是一篇初始化文章，用来确认博客前后台、评论系统、Markdown 渲染和可选 AI 正确性评论都已经打通。",
-      coverImage:
-        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80",
+      coverImage: null,
       categoryId: engineering.id,
       status: "PUBLISHED",
       publishedAt: new Date("2026-04-25T09:00:00.000Z"),
@@ -172,8 +171,7 @@ async function main() {
       title: "JVM 内存结构与对象创建流程",
       excerpt:
         "从程序计数器、虚拟机栈、堆、方法区出发，串起 Java 对象从创建到进入 GC 可达性分析的完整路径。",
-      coverImage:
-        "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
+      coverImage: null,
       categoryId: jvmColumn.id,
       status: "PUBLISHED",
       publishedAt: new Date("2026-04-24T09:00:00.000Z"),
@@ -199,8 +197,7 @@ async function main() {
       title: "项目复盘模板：如何把一次开发写成有价值的沉淀",
       excerpt:
         "用固定结构记录项目背景、目标、架构、风险和复盘，比只贴代码更有长期价值。",
-      coverImage:
-        "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+      coverImage: null,
       categoryId: projectReview.id,
       status: "PUBLISHED",
       publishedAt: new Date("2026-04-22T09:00:00.000Z"),

@@ -17,7 +17,8 @@ const app = express();
 
 app.use(cors());
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(express.json({ limit: "2mb" }));
+// ???? base64 ?? JSON ???????????????
+app.use(express.json({ limit: "80mb" }));
 app.use(morgan("dev"));
 
 app.get("/api/health", (_req, res) => {

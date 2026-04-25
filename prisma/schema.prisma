@@ -22,6 +22,10 @@ model SiteSetting {
   heroTitle       String
   heroDescription String
   heroImage       String?
+  welcomeEyebrow  String   @default("欢迎光临")
+  welcomeTitle    String   @default("一套可以长期写作、持续扩展、适合沉淀技术与生活的个人博客")
+  welcomeBody     String   @default("这里会持续更新 Java、JVM、后端工程实践、项目复盘和个人成长记录。它不是只展示结果的站点，而是一份长期可读的个人工程档案。")
+  welcomeTags     String   @default("简洁首页,后台写作,分类管理,Markdown 编辑,AI 正确性评论,JVM 专栏")
   profileName     String
   profileTagline  String
   profileImage    String?

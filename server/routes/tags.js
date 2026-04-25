@@ -47,4 +47,28 @@ router.post("/", requireAdmin, async (req, res) => {
   res.json(tag);
 });
 
+router.delete("/:id", requireAdmin, async (req, res) => {
+  const tagId = Number(req.params.id);
+
+  const tag = await prisma.tag.findUnique({
+    where: { id: tagId },
+    include: {
+      _count: {
+        select: { postTags: true },
+      },
+    },
+  });
+
+  if (!tag) {
+    return res.status(404).json({ message: "标签不存在" });
+  }
+
+  if (tag._count.postTags > 0) {
+    return res.status(409).json({ message: "该标签仍被文章使用，不能删除" });
+  }
+
+  await prisma.tag.delete({ where: { id: tagId } });
+  res.json({ success: true });
+});
+
 module.exports = router;

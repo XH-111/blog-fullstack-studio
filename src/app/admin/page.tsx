@@ -41,16 +41,21 @@ export default function AdminDashboardPage() {
       .catch(() => router.push("/admin/login"));
   }, [router, token]);
 
-  async function handleDelete(postId: number) {
+  async function handleDelete(post: PostRecord) {
     if (!token) {
       return;
     }
 
-    await apiFetch(`/api/posts/${postId}`, {
+    const confirmed = window.confirm(`确认删除「${post.title}」？删除后不可恢复。`);
+    if (!confirmed) {
+      return;
+    }
+
+    await apiFetch(`/api/posts/${post.id}`, {
       method: "DELETE",
       token,
     });
-    setPosts((current) => current.filter((item) => item.id !== postId));
+    setPosts((current) => current.filter((item) => item.id !== post.id));
   }
 
   async function handleStatusChange(postId: number, status: "DRAFT" | "PUBLISHED") {
@@ -145,7 +150,7 @@ export default function AdminDashboardPage() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => void handleDelete(post.id)}
+                    onClick={() => void handleDelete(post)}
                     className="rounded-full border border-[var(--color-rose)] bg-white px-4 py-2 text-sm text-[#b44a5a]"
                   >
                     删除

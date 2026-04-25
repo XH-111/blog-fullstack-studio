@@ -4,7 +4,6 @@ import { Extension } from "@tiptap/core";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
-import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
@@ -18,7 +17,7 @@ import {
   useEditor,
 } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type RichTextValue = {
   json: JSONContent | null;
@@ -38,9 +37,9 @@ type ToolbarButtonProps = {
   onRun: () => void;
 };
 
-const widths = [320, 480, 640, 800];
 const swatches = ["#111827", "#2563eb", "#7c3aed", "#dc2626", "#16a34a"];
 const fontSizes = ["14px", "16px", "18px", "20px", "24px", "28px", "32px"];
+const imageWidthPresets = [320, 480, 640, 800];
 
 const FontSize = Extension.create({
   name: "fontSize",
@@ -214,9 +213,9 @@ export function RichTextEditor({
   initialHtml,
   onChange,
 }: RichTextEditorProps) {
-  const [imageUrl, setImageUrl] = useState("");
-  const [linkUrl, setLinkUrl] = useState("");
+  const [imageWidth, setImageWidth] = useState("640");
   const parsedJson = useMemo(() => parseInitialJson(initialJson), [initialJson]);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -226,11 +225,6 @@ export function RichTextEditor({
       }),
       RichImage.configure({
         allowBase64: true,
-      }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true,
       }),
       Placeholder.configure({
         placeholder: "开始写正文，支持粘贴图片、插入链接、编号、字号和颜色。",
@@ -302,8 +296,7 @@ export function RichTextEditor({
     });
   }, [editor, onChange]);
 
-  function insertImage() {
-    const src = imageUrl.trim();
+  function insertImage(src: string) {
     if (!src || !editor) {
       return;
     }
@@ -314,7 +307,6 @@ export function RichTextEditor({
       .setImage({ src, alt: "文章配图" })
       .updateAttributes("image", { style: "width: 640px;" })
       .run();
-    setImageUrl("");
   }
 
   function applyImageWidth(width: number) {
@@ -322,22 +314,25 @@ export function RichTextEditor({
       return;
     }
 
-    editor.chain().focus().updateAttributes("image", { style: `width: ${width}px;` }).run();
+    const nextWidth = Math.max(80, Math.min(1600, Math.round(width)));
+    setImageWidth(String(nextWidth));
+    editor.chain().focus().updateAttributes("image", { style: `width: ${nextWidth}px;` }).run();
   }
 
-  function applyLink() {
-    if (!editor) {
+  function handleImageInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
       return;
     }
 
-    const href = linkUrl.trim();
-    if (!href) {
-      editor.chain().focus().unsetLink().run();
-      return;
-    }
-
-    editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
-    setLinkUrl("");
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        insertImage(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
   }
 
   if (!editor) {
@@ -435,51 +430,51 @@ export function RichTextEditor({
             onRun={() => editor.chain().focus().toggleHighlight({ color: "#fff1a8" }).run()}
           />
           <ToolbarButton label="撤销" onRun={() => editor.chain().focus().undo().run()} />
-          <ToolbarButton label="重做" onRun={() => editor.chain().focus().redo().run()} />
         </div>
       </div>
 
-      <div className="grid gap-3 border-b border-[#d6d9de] bg-[#f8f9fb] px-5 py-4 lg:grid-cols-[minmax(0,1fr)_120px_120px_160px]">
-        <input
-          value={imageUrl}
-          onChange={(event) => setImageUrl(event.target.value)}
-          placeholder="图片 URL，或直接在正文中粘贴图片"
-          className="rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-3 text-sm outline-none"
-        />
-        <button
-          type="button"
-          onClick={insertImage}
-          className="rounded-[6px] bg-[var(--color-accent)] px-4 py-3 text-sm font-semibold text-white"
+      <input
+        ref={imageInputRef}
+        id="post-image-input"
+        type="file"
+        accept="image/*"
+        className="absolute -left-[9999px] h-px w-px opacity-0 pointer-events-none"
+        onChange={handleImageInputChange}
+      />
+
+      <div className="flex flex-wrap items-center gap-3 border-b border-[#d6d9de] bg-[#f8f9fb] px-5 py-4">
+        <label
+          htmlFor="post-image-input"
+          className="cursor-pointer rounded-[6px] bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-white"
         >
           插入图片
-        </button>
-        <button
-          type="button"
-          onClick={applyLink}
-          className="rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-3 text-sm font-semibold text-[var(--color-ink)]"
-        >
-          设置链接
-        </button>
-        <input
-          value={linkUrl}
-          onChange={(event) => setLinkUrl(event.target.value)}
-          placeholder="https://..."
-          className="rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-3 text-sm outline-none"
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 border-b border-[#d6d9de] bg-[#f8f9fb] px-5 py-3 text-xs text-[var(--color-text-faint)]">
-        <span>选中图片后调整宽度：</span>
-        {widths.map((width) => (
-          <button
-            key={width}
-            type="button"
-            onClick={() => applyImageWidth(width)}
-            className="rounded-[6px] border border-[#cfd4dc] bg-white px-3 py-1 text-[var(--color-text)]"
-          >
-            {width}px
-          </button>
-        ))}
+        </label>
+        <label className="flex h-10 items-center gap-2 rounded-[6px] border border-[#cfd4dc] bg-white px-3 text-sm text-[var(--color-text)]">
+          图片大小
+          <input
+            list="image-width-presets"
+            inputMode="numeric"
+            value={imageWidth}
+            onChange={(event) => setImageWidth(event.target.value.replace(/\D/g, ""))}
+            onBlur={() => {
+              const width = Number(imageWidth) || 640;
+              applyImageWidth(width);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                applyImageWidth(Number(imageWidth) || 640);
+              }
+            }}
+            className="h-8 w-24 rounded-[6px] border border-[#cfd4dc] bg-[#f8f9fb] px-2 text-sm text-[var(--color-ink)] outline-none"
+          />
+          <span className="text-xs text-[var(--color-text-faint)]">px</span>
+          <datalist id="image-width-presets">
+            {imageWidthPresets.map((width) => (
+              <option key={width} value={width} />
+            ))}
+          </datalist>
+        </label>
       </div>
 
       <div className="overflow-auto bg-[#dfe3e8] px-4 py-8">

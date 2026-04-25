@@ -62,6 +62,10 @@ export type SiteSettingsRecord = {
   heroTitle: string;
   heroDescription: string;
   heroImage?: string | null;
+  welcomeEyebrow: string;
+  welcomeTitle: string;
+  welcomeBody: string;
+  welcomeTags: string;
   profileName: string;
   profileTagline: string;
   profileImage?: string | null;
