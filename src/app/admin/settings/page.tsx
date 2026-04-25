@@ -16,6 +16,8 @@ const emptySettings: SiteSettingsRecord = {
   welcomeTitle: "",
   welcomeBody: "",
   welcomeTags: "",
+  featuredTitle: "置顶文章",
+  featuredDescription: "从知识库里挑选的最多三篇内容。",
   profileName: "",
   profileTagline: "",
   profileImage: "",
@@ -95,6 +97,8 @@ export default function AdminSettingsPage() {
         welcomeTitle: form.welcomeTitle,
         welcomeBody: form.welcomeBody,
         welcomeTags: form.welcomeTags,
+        featuredTitle: form.featuredTitle,
+        featuredDescription: form.featuredDescription,
         profileName: form.profileName,
         profileTagline: form.profileTagline,
         profileImage: form.profileImage,
@@ -122,7 +126,7 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="font-serif text-4xl text-[var(--color-ink)]">站点设置</h1>
         <p className="mt-2 text-sm text-[var(--color-text)]">
-          修改首页主视觉、个人信息和首页欢迎卡片内容。头像支持直接从本地选择图片。
+          修改首页主视觉、个人信息、欢迎卡片和置顶文章模块。
         </p>
       </div>
 
@@ -226,12 +230,35 @@ export default function AdminSettingsPage() {
                 <textarea
                   value={form.welcomeTags}
                   onChange={(event) => setForm((current) => ({ ...current, welcomeTags: event.target.value }))}
-                  placeholder="简洁首页, 后台写作, 分类管理"
+                  placeholder="帅气, 天真, 可爱"
                   className="min-h-[88px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
                 />
                 <span className="block text-xs text-[var(--color-text-faint)]">
                   支持用中文逗号、英文逗号或换行分隔。
                 </span>
+              </label>
+            </section>
+
+            <section className="space-y-4">
+              <h2 className="font-serif text-2xl text-[var(--color-ink)]">首页置顶模块</h2>
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>模块标题</span>
+                <input
+                  value={form.featuredTitle}
+                  onChange={(event) => setForm((current) => ({ ...current, featuredTitle: event.target.value }))}
+                  placeholder="主包精选"
+                  className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
+              </label>
+
+              <label className="space-y-2 text-sm text-[var(--color-text)]">
+                <span>模块说明</span>
+                <textarea
+                  value={form.featuredDescription}
+                  onChange={(event) => setForm((current) => ({ ...current, featuredDescription: event.target.value }))}
+                  placeholder="从知识库里挑选的最多三篇内容。"
+                  className="min-h-[88px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+                />
               </label>
             </section>
 
@@ -305,7 +332,7 @@ export default function AdminSettingsPage() {
                 </div>
                 <div>
                   <p className="font-serif text-2xl text-[var(--color-ink)]">{form.siteTitle || "POETIZE"}</p>
-                  <p className="text-sm text-[var(--color-text)]">{form.profileName || "何醒辉"}</p>
+                  <p className="text-sm text-[var(--color-text)]">{form.profileName || "何醒旭"}</p>
                 </div>
               </div>
 
@@ -330,6 +357,18 @@ export default function AdminSettingsPage() {
                     </span>
                   ))}
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-[22px] bg-white/76 p-4">
+                <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent)]">
+                  Featured
+                </p>
+                <p className="mt-3 font-serif text-2xl text-[var(--color-ink)]">
+                  {form.featuredTitle || "置顶文章"}
+                </p>
+                <p className="mt-2 text-sm leading-7 text-[var(--color-text)]">
+                  {form.featuredDescription || "从知识库里挑选的最多三篇内容。"}
+                </p>
               </div>
             </div>
           </div>

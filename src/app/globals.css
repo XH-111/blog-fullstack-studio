@@ -91,3 +91,130 @@ select {
   margin-left: auto;
   margin-right: auto;
 }
+
+.race-track {
+  position: relative;
+  height: 24px;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.65) 0,
+      rgba(255, 255, 255, 0.65) 10px,
+      rgba(77, 170, 160, 0.08) 10px,
+      rgba(77, 170, 160, 0.08) 20px
+    ),
+    rgba(255, 255, 255, 0.76);
+}
+
+.race-track::after {
+  position: absolute;
+  inset: 50% 12px auto;
+  height: 1px;
+  content: "";
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(32, 50, 60, 0.22) 0,
+    rgba(32, 50, 60, 0.22) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  transform: translateY(-50%);
+}
+
+.race-track-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--race-progress);
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--race-color) 42%, white), var(--race-color));
+  opacity: 0.64;
+  animation: race-flow 1.6s linear infinite;
+}
+
+.race-car {
+  position: absolute;
+  left: clamp(18px, var(--race-progress), calc(100% - 18px));
+  top: 50%;
+  z-index: 1;
+  width: 28px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  animation: race-car-bob 0.72s ease-in-out infinite;
+}
+
+.race-car-body {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 3px;
+  height: 9px;
+  border: 1px solid rgba(32, 50, 60, 0.28);
+  border-radius: 8px 10px 6px 6px;
+  background: var(--race-color);
+  box-shadow: 0 4px 12px rgba(32, 50, 60, 0.18);
+}
+
+.race-car-body::before {
+  position: absolute;
+  right: 6px;
+  top: -4px;
+  width: 9px;
+  height: 6px;
+  content: "";
+  border: 1px solid rgba(32, 50, 60, 0.18);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.race-car-wheel {
+  position: absolute;
+  bottom: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  animation: race-wheel-spin 0.5s linear infinite;
+}
+
+.race-car-wheel-left {
+  left: 7px;
+}
+
+.race-car-wheel-right {
+  right: 7px;
+}
+
+@keyframes race-flow {
+  from {
+    filter: saturate(1);
+  }
+  50% {
+    filter: saturate(1.18) brightness(1.03);
+  }
+  to {
+    filter: saturate(1);
+  }
+}
+
+@keyframes race-car-bob {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translateY(0);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-1px);
+  }
+}
+
+@keyframes race-wheel-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

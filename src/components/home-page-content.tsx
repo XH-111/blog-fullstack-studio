@@ -1,8 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { CategoryRecord, PostRecord, SiteSettingsRecord } from "@/lib/api";
+import {
+  apiFetch,
+  CategoryRecord,
+  HomeReactionRecord,
+  PostRecord,
+  SiteSettingsRecord,
+} from "@/lib/api";
 import { PageHero } from "@/components/page-hero";
 import { SurfaceCard } from "@/components/surface-card";
 import { resolveCoverImage } from "@/lib/cover-image";
@@ -12,6 +18,8 @@ type HomePageContentProps = {
   posts: PostRecord[];
   categories: CategoryRecord[];
   settings: SiteSettingsRecord;
+  reaction: HomeReactionRecord;
+  guestbookCount: number;
 };
 
 function getProfileInitials(name: string) {
@@ -28,28 +36,44 @@ function splitWelcomeTags(value: string) {
 
 export function HomePageContent({
   posts,
-  categories,
+  categories: _categories,
   settings,
+  reaction,
+  guestbookCount,
 }: HomePageContentProps) {
-  const [search, setSearch] = useState("");
+  const [reactionState, setReactionState] = useState(reaction);
+  const [bubbleTag, setBubbleTag] = useState("");
+  const [isReacting, setIsReacting] = useState(false);
+  const welcomeTags = splitWelcomeTags(settings.welcomeTags);
+  const featuredPosts = posts
+    .filter((post) => post.status === "PUBLISHED" && post.isFeatured)
+    .slice(0, 3);
+  const topTags = Object.entries(reactionState.tagCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 4);
+  const maxTagCount = Math.max(...topTags.map(([, count]) => count), 1);
 
-  const filteredPosts = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    if (!keyword) {
-      return posts;
+  async function handleTagClick(tag: string) {
+    if (isReacting) {
+      return;
     }
 
-    return posts.filter((post) =>
-      [post.title, post.excerpt, post.category.name]
-        .join(" ")
-        .toLowerCase()
-        .includes(keyword)
-    );
-  }, [posts, search]);
+    setBubbleTag(tag);
+    setIsReacting(true);
 
-  const totalViews = posts.reduce((sum, item) => sum + item.viewCount, 0);
-  const featuredCategories = categories.slice(0, 6);
-  const welcomeTags = splitWelcomeTags(settings.welcomeTags);
+    try {
+      const updated = await apiFetch<HomeReactionRecord>("/api/home-reactions", {
+        method: "POST",
+        body: JSON.stringify({ tag }),
+      });
+      setReactionState(updated);
+    } finally {
+      setIsReacting(false);
+      window.setTimeout(() => {
+        setBubbleTag((current) => (current === tag ? "" : current));
+      }, 1800);
+    }
+  }
 
   return (
     <main className="flex flex-1 flex-col pb-20">
@@ -89,129 +113,165 @@ export function HomePageContent({
                 </p>
 
                 <div className="mt-6 grid w-full grid-cols-3 gap-3 rounded-[22px] bg-white/72 p-4 text-center">
-                  <div>
+                  <Link href="/knowledge" className="rounded-[16px] px-2 py-1 transition hover:bg-white/70">
                     <p className="text-lg font-semibold text-[var(--color-ink)]">{posts.length}</p>
                     <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">文章</p>
+                  </Link>
+                  <div className="rounded-[16px] px-2 py-1">
+                    <p className="text-lg font-semibold text-[var(--color-ink)]">{reactionState.total}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">点赞</p>
                   </div>
-                  <div>
-                    <p className="text-lg font-semibold text-[var(--color-ink)]">{categories.length}</p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">分类</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-[var(--color-ink)]">{totalViews}</p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">阅读</p>
-                  </div>
+                  <Link href="/guestbook" className="rounded-[16px] px-2 py-1 transition hover:bg-white/70">
+                    <p className="text-lg font-semibold text-[var(--color-ink)]">{guestbookCount}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">留言</p>
+                  </Link>
                 </div>
               </div>
             </SurfaceCard>
 
             <SurfaceCard>
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">搜索</p>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="搜索文章、分类或关键词"
-                className="mt-4 w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 text-sm outline-none"
-              />
-              <Link
-                href={`/search?q=${encodeURIComponent(search)}`}
-                className="mt-4 inline-flex rounded-full bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white"
-              >
-                进入搜索页
-              </Link>
-            </SurfaceCard>
-
-            <SurfaceCard>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">分类</p>
-                <Link
-                  href="/admin/taxonomies"
-                  className="text-xs text-[var(--color-text-faint)] transition hover:text-[var(--color-accent)]"
-                >
-                  后台管理
-                </Link>
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">点赞</p>
+              <div className="mt-4 rounded-[24px] bg-white/74 p-5 text-center">
+                <p className="font-serif text-5xl text-[var(--color-ink)]">{reactionState.total}</p>
+                <p className="mt-2 text-sm text-[var(--color-text-faint)]">主包收到的认可</p>
               </div>
-              <div className="mt-4 space-y-3">
-                {featuredCategories.map((category) => (
-                  <Link
-                    key={category.id}
-                    href={`/categories/${category.slug}`}
-                    className="flex items-center justify-between rounded-[18px] border border-[var(--color-line)] bg-white/88 px-4 py-3 text-sm text-[var(--color-text)] transition hover:-translate-y-0.5"
-                  >
-                    <span>{category.name}</span>
-                    <span className="text-[var(--color-text-faint)]">{category._count?.posts || 0}</span>
-                  </Link>
-                ))}
+              <div className="mt-5 space-y-4">
+                {topTags.map(([tag, count], index) => {
+                  const progress = Math.max(12, Math.round((count / maxTagCount) * 100));
+                  const color = pastelChips[index % pastelChips.length];
+
+                  return (
+                    <div key={tag} className="space-y-2">
+                      <div className="flex items-center justify-between gap-3 text-sm text-[var(--color-text)]">
+                        <span className="font-medium text-[var(--color-ink)]">{tag}</span>
+                        <span className="text-[var(--color-text-faint)]">{count}</span>
+                      </div>
+                      <div
+                        className="race-track"
+                        style={
+                          {
+                            "--race-progress": `${progress}%`,
+                            "--race-color": color,
+                          } as React.CSSProperties
+                        }
+                      >
+                        <div className="race-track-fill" />
+                        <div className="race-car" aria-hidden="true">
+                          <span className="race-car-body" />
+                          <span className="race-car-wheel race-car-wheel-left" />
+                          <span className="race-car-wheel race-car-wheel-right" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {topTags.length === 0 && (
+                  <p className="rounded-[16px] border border-[var(--color-line)] bg-white/80 px-4 py-3 text-sm text-[var(--color-text-faint)]">
+                    点击右侧标签，为主包点个赞。
+                  </p>
+                )}
               </div>
             </SurfaceCard>
           </aside>
 
           <div className="space-y-6">
             <SurfaceCard>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-accent)]">
-                    {settings.welcomeEyebrow}
-                  </p>
-                  <h2 className="mt-3 font-serif text-4xl text-[var(--color-ink)]">
-                    {settings.welcomeTitle}
-                  </h2>
-                  <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--color-text)]">
-                    {settings.welcomeBody}
-                  </p>
-                </div>
-                <Link href="/archives" className="rounded-full bg-[var(--color-accent)]/10 px-4 py-2 text-sm text-[var(--color-accent)]">
-                  查看归档
-                </Link>
+              <div>
+                <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-accent)]">
+                  {settings.welcomeEyebrow}
+                </p>
+                <h2 className="mt-3 font-serif text-4xl text-[var(--color-ink)]">
+                  {settings.welcomeTitle}
+                </h2>
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--color-text)]">
+                  {settings.welcomeBody}
+                </p>
               </div>
 
               <div className="mt-6 flex flex-wrap gap-3">
                 {welcomeTags.map((label, index) => (
-                  <span
-                    key={`${label}-${index}`}
-                    className="rounded-full px-4 py-2 text-xs font-medium text-[var(--color-ink)]"
-                    style={{ backgroundColor: pastelChips[index % pastelChips.length] }}
-                  >
-                    {label}
+                  <span key={`${label}-${index}`} className="relative inline-flex">
+                    <button
+                      type="button"
+                      onClick={() => void handleTagClick(label)}
+                      className="rounded-full px-4 py-2 text-xs font-medium text-[var(--color-ink)] transition hover:-translate-y-0.5 disabled:opacity-70"
+                      style={{ backgroundColor: pastelChips[index % pastelChips.length] }}
+                      disabled={isReacting}
+                    >
+                      {label}
+                    </button>
+                    {bubbleTag === label && (
+                      <span className="absolute left-1/2 top-full z-10 mt-2 w-max max-w-[220px] -translate-x-1/2 rounded-[16px] bg-[var(--color-ink)] px-4 py-2 text-xs leading-5 text-white shadow-[0_16px_40px_rgba(23,37,51,0.18)]">
+                        {label}的主包得到了你的认可
+                      </span>
+                    )}
                   </span>
                 ))}
               </div>
             </SurfaceCard>
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {filteredPosts.map((post, index) => (
-                <Link
-                  key={post.id}
-                  href={`/posts/${post.slug}`}
-                  className="overflow-hidden rounded-[24px] border border-[var(--color-line)] bg-white/92 shadow-[var(--shadow-card)] transition-transform duration-300 hover:-translate-y-1.5"
-                >
-                  <div
-                    className="h-40 w-full bg-cover bg-center"
-                    style={{
-                      backgroundImage: `url(${resolveCoverImage(post.coverImage)})`,
-                    }}
-                  />
-                  <div className="p-5">
-                    <span
-                      className="rounded-full px-3 py-1 text-xs font-medium text-[var(--color-ink)]"
-                      style={{ backgroundColor: pastelChips[index % pastelChips.length] }}
-                    >
-                      {post.category.name}
-                    </span>
-                    <h3 className="mt-4 font-serif text-2xl leading-tight text-[var(--color-ink)]">{post.title}</h3>
-                    <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">{post.excerpt}</p>
-                    <div className="mt-5 flex items-center justify-between text-xs text-[var(--color-text-faint)]">
-                      <span>
-                        {post.publishedAt
-                          ? new Date(post.publishedAt).toLocaleDateString("zh-CN")
-                          : "未发布"}
-                      </span>
-                      <span>{post.commentCount} 条评论</span>
-                    </div>
+            {featuredPosts.length > 0 && (
+              <SurfaceCard>
+                <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent)]">
+                      Featured
+                    </p>
+                    <h2 className="mt-3 font-serif text-3xl text-[var(--color-ink)]">
+                      {settings.featuredTitle}
+                    </h2>
+                    <p className="mt-2 text-sm leading-7 text-[var(--color-text)]">
+                      {settings.featuredDescription}
+                    </p>
                   </div>
-                </Link>
-              ))}
-            </div>
+                  <Link
+                    href="/knowledge"
+                    className="rounded-full bg-[var(--color-accent)]/10 px-4 py-2 text-sm text-[var(--color-accent)]"
+                  >
+                    进入知识库
+                  </Link>
+                </div>
+
+                <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                  {featuredPosts.map((post, index) => (
+                    <Link
+                      key={post.id}
+                      href={`/posts/${post.slug}`}
+                      className="group overflow-hidden rounded-[24px] border border-[var(--color-line)] bg-white/92 shadow-[var(--shadow-card)] transition-transform duration-300 hover:-translate-y-1.5"
+                    >
+                      <div
+                        className="h-44 w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03]"
+                        style={{
+                          backgroundImage: `url(${resolveCoverImage(post.coverImage)})`,
+                        }}
+                      />
+                      <div className="p-5">
+                        <span
+                          className="rounded-full px-3 py-1 text-xs font-medium text-[var(--color-ink)]"
+                          style={{ backgroundColor: pastelChips[index % pastelChips.length] }}
+                        >
+                          {post.category.name}
+                        </span>
+                        <h3 className="mt-4 font-serif text-2xl leading-tight text-[var(--color-ink)]">
+                          {post.title}
+                        </h3>
+                        <p className="mt-3 line-clamp-4 text-sm leading-7 text-[var(--color-text)]">
+                          {post.excerpt}
+                        </p>
+                        <div className="mt-5 flex items-center justify-between text-xs text-[var(--color-text-faint)]">
+                          <span>
+                            {post.publishedAt
+                              ? new Date(post.publishedAt).toLocaleDateString("zh-CN")
+                              : "未发布"}
+                          </span>
+                          <span>{post.commentCount} 条评论</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </SurfaceCard>
+            )}
           </div>
         </div>
       </section>

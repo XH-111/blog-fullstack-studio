@@ -53,6 +53,13 @@ export type GuestbookMessageRecord = {
   updatedAt: string;
 };
 
+export type HomeReactionRecord = {
+  id: string;
+  total: number;
+  tagCounts: Record<string, number>;
+  updatedAt: string;
+};
+
 export type CategoryRecord = {
   id: number;
   name: string;
@@ -77,6 +84,8 @@ export type SiteSettingsRecord = {
   welcomeTitle: string;
   welcomeBody: string;
   welcomeTags: string;
+  featuredTitle: string;
+  featuredDescription: string;
   profileName: string;
   profileTagline: string;
   profileImage?: string | null;
@@ -90,6 +99,7 @@ export type PostRecord = {
   excerpt: string;
   coverImage?: string | null;
   status: "DRAFT" | "PUBLISHED";
+  isFeatured: boolean;
   publishedAt?: string | null;
   viewCount: number;
   createdAt: string;

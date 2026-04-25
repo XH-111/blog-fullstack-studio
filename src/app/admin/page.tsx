@@ -114,6 +114,26 @@ export default function AdminDashboardPage() {
     setPosts((current) => current.map((item) => (item.id === postId ? updated : item)));
   }
 
+  async function handleFeaturedChange(post: PostRecord) {
+    if (!token) {
+      return;
+    }
+
+    if (post.status !== "PUBLISHED" && !post.isFeatured) {
+      setMessage("只有已发布文章可以置顶到首页");
+      return;
+    }
+
+    const updated = await apiFetch<PostRecord>(`/api/posts/${post.id}/featured`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ isFeatured: !post.isFeatured }),
+    });
+
+    setPosts((current) => current.map((item) => (item.id === post.id ? updated : item)));
+    setMessage(updated.isFeatured ? "文章已置顶到首页" : "已取消首页置顶");
+  }
+
   async function handleReply(messageId: number) {
     if (!token) {
       return;
@@ -140,7 +160,7 @@ export default function AdminDashboardPage() {
         <div>
           <h1 className="font-serif text-4xl text-[var(--color-ink)]">内容后台</h1>
           <p className="mt-2 text-sm text-[var(--color-text)]">
-            管理文章、分类、站点设置和留言板。文章与留言默认折叠，避免后台首屏过长。
+            管理文章、分类、站点设置、留言板和首页置顶文章。
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -181,7 +201,7 @@ export default function AdminDashboardPage() {
           <div>
             <h2 className="font-serif text-3xl text-[var(--color-ink)]">文章管理</h2>
             <p className="mt-1 text-sm text-[var(--color-text-faint)]">
-              共 {posts.length} 篇文章
+              共 {posts.length} 篇文章，已置顶 {posts.filter((post) => post.isFeatured).length} 篇
             </p>
           </div>
           <span className="rounded-full border border-[var(--color-line)] bg-white px-4 py-2 text-sm text-[var(--color-text)]">
@@ -191,6 +211,8 @@ export default function AdminDashboardPage() {
 
         {isPostsOpen && (
           <div className="mt-5 grid gap-5">
+            {message && <p className="text-sm text-[var(--color-text-faint)]">{message}</p>}
+
             {posts.map((post) => {
               const isPublished = post.status === "PUBLISHED";
 
@@ -205,12 +227,29 @@ export default function AdminDashboardPage() {
                         <span>{post.category.name}</span>
                         <span>{isPublished ? "已发布" : "草稿"}</span>
                         <span>{post.commentCount} 条评论</span>
+                        {post.isFeatured && (
+                          <span className="rounded-full bg-[var(--color-accent)]/10 px-2 py-0.5 text-[var(--color-accent)]">
+                            首页置顶
+                          </span>
+                        )}
                       </div>
                       <h3 className="mt-3 font-serif text-3xl text-[var(--color-ink)]">{post.title}</h3>
                       <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">{post.excerpt}</p>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 lg:max-w-[280px] lg:justify-end">
+                    <div className="flex flex-wrap gap-3 lg:max-w-[360px] lg:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => void handleFeaturedChange(post)}
+                        disabled={!isPublished && !post.isFeatured}
+                        className={`rounded-full px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 ${
+                          post.isFeatured
+                            ? "border border-[var(--color-line)] bg-white text-[var(--color-ink)]"
+                            : "bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+                        }`}
+                      >
+                        {post.isFeatured ? "取消置顶" : "置顶"}
+                      </button>
                       <button
                         type="button"
                         onClick={() => void handleStatusChange(post.id, isPublished ? "DRAFT" : "PUBLISHED")}

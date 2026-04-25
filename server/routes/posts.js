@@ -139,6 +139,7 @@ function mapPost(post) {
     excerpt: post.excerpt,
     coverImage: post.coverImage,
     status: post.status,
+    isFeatured: post.isFeatured,
     publishedAt: post.publishedAt,
     viewCount: post.viewCount,
     createdAt: post.createdAt,
@@ -403,9 +404,32 @@ router.patch("/:id/status", requireAdmin, async (req, res) => {
     where: { id: postId },
     data: {
       status,
+      isFeatured: status === "PUBLISHED" ? existing.isFeatured : false,
       publishedAt:
         status === "PUBLISHED" ? existing.publishedAt || new Date() : null,
     },
+  });
+
+  const fullPost = await fetchFullPost(updated.id);
+  res.json(mapPost(fullPost));
+});
+
+router.patch("/:id/featured", requireAdmin, async (req, res) => {
+  const postId = Number(req.params.id);
+  const isFeatured = req.body?.isFeatured === true;
+
+  const existing = await prisma.post.findUnique({ where: { id: postId } });
+  if (!existing) {
+    return res.status(404).json({ message: "文章不存在" });
+  }
+
+  if (isFeatured && existing.status !== "PUBLISHED") {
+    return res.status(400).json({ message: "只有已发布文章可以置顶到首页" });
+  }
+
+  const updated = await prisma.post.update({
+    where: { id: postId },
+    data: { isFeatured },
   });
 
   const fullPost = await fetchFullPost(updated.id);

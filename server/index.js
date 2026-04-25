@@ -13,6 +13,7 @@ const tagRoutes = require("./routes/tags");
 const dashboardRoutes = require("./routes/dashboard");
 const settingsRoutes = require("./routes/settings");
 const guestbookRoutes = require("./routes/guestbook");
+const homeReactionRoutes = require("./routes/home-reactions");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/api/tags", tagRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/guestbook", guestbookRoutes);
+app.use("/api/home-reactions", homeReactionRoutes);
 
 app.use((error, _req, res, _next) => {
   console.error(error);
