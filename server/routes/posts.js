@@ -144,7 +144,9 @@ function mapPost(post) {
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     contentMarkdown: post.contentMarkdown,
+    contentJson: post.contentJson,
     contentHtml: post.contentHtml,
+    contentText: post.contentText,
     category: post.category,
     tags: post.postTags.map((item) => item.tag),
     aiOfficialComment: post.aiOfficialComment,
@@ -155,17 +157,25 @@ function mapPost(post) {
 
 async function buildPostPayload(body, ignoreId) {
   const title = String(body.title || "").trim();
-  const contentMarkdown = String(body.contentMarkdown || "").trim();
+  const contentHtml = String(body.contentHtml || "").trim();
+  const contentText = String(body.contentText || "").trim();
+  const contentJson =
+    typeof body.contentJson === "string"
+      ? body.contentJson
+      : body.contentJson
+        ? JSON.stringify(body.contentJson)
+        : null;
+  const contentMarkdown = String(body.contentMarkdown || contentText || "").trim();
   const categoryId = Number(body.categoryId);
   const coverImage = String(body.coverImage || "").trim() || null;
   const requestedExcerpt = String(body.excerpt || "").trim();
   const excerpt =
     requestedExcerpt ||
-    (title && contentMarkdown
-      ? await generateExcerpt({ title, contentMarkdown })
+    (title && (contentText || contentMarkdown)
+      ? await generateExcerpt({ title, contentMarkdown: contentText || contentMarkdown })
       : "");
 
-  if (!title || !contentMarkdown || !categoryId) {
+  if (!title || !(contentHtml || contentMarkdown || contentText) || !categoryId) {
     return {
       error: "文章标题、正文和分类不能为空",
     };
@@ -176,6 +186,9 @@ async function buildPostPayload(body, ignoreId) {
     excerpt,
     coverImage,
     contentMarkdown,
+    contentJson,
+    contentHtml: contentHtml || renderMarkdown(contentMarkdown),
+    contentText,
     categoryId,
     tags: Array.isArray(body.tags) ? body.tags : [],
     status: body.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
@@ -210,6 +223,7 @@ router.get("/", async (req, res) => {
           OR: [
             { title: { contains: search } },
             { excerpt: { contains: search } },
+            { contentText: { contains: search } },
             { contentMarkdown: { contains: search } },
           ],
         }
@@ -313,7 +327,9 @@ router.post("/", requireAdmin, async (req, res) => {
       excerpt: payload.excerpt,
       coverImage: payload.coverImage,
       contentMarkdown: payload.contentMarkdown,
-      contentHtml: renderMarkdown(payload.contentMarkdown),
+      contentJson: payload.contentJson,
+      contentHtml: payload.contentHtml,
+      contentText: payload.contentText,
       categoryId: payload.categoryId,
       status: payload.status,
       publishedAt: isPublished ? new Date() : null,
@@ -354,7 +370,9 @@ router.put("/:id", requireAdmin, async (req, res) => {
       excerpt: payload.excerpt,
       coverImage: payload.coverImage,
       contentMarkdown: payload.contentMarkdown,
-      contentHtml: renderMarkdown(payload.contentMarkdown),
+      contentJson: payload.contentJson,
+      contentHtml: payload.contentHtml,
+      contentText: payload.contentText,
       categoryId: payload.categoryId,
       status: payload.status,
       publishedAt: isPublished ? existing.publishedAt || new Date() : null,

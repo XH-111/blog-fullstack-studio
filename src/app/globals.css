@@ -70,3 +70,16 @@ select {
 ::selection {
   background: rgba(77, 170, 160, 0.18);
 }
+
+.ProseMirror ol,
+.rich-post-content ol {
+  list-style-type: decimal;
+  padding-left: 1.75rem;
+}
+
+.ProseMirror li,
+.rich-post-content li {
+  padding-left: 0.25rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}

@@ -53,7 +53,9 @@ model Post {
   excerpt           String
   coverImage        String?
   contentMarkdown   String
+  contentJson       String?
   contentHtml       String
+  contentText       String?
   status            PostStatus          @default(DRAFT)
   publishedAt       DateTime?
   viewCount         Int                 @default(0)

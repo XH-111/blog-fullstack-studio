@@ -80,7 +80,9 @@ export type PostRecord = {
   createdAt: string;
   updatedAt: string;
   contentMarkdown: string;
+  contentJson?: string | null;
   contentHtml: string;
+  contentText?: string | null;
   category: { id: number; name: string; slug: string };
   tags: Array<{ id: number; name: string; slug: string }>;
   aiOfficialComment?: { content: string } | null;

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiFetch, PostRecord } from "@/lib/api";
-import { SurfaceCard } from "@/components/surface-card";
 import { AdminPostForm } from "@/components/admin-post-form";
 
 export default function EditPostPage() {
@@ -37,17 +36,5 @@ export default function EditPostPage() {
     return null;
   }
 
-  return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-8">
-      <SurfaceCard>
-        <h1 className="font-serif text-4xl text-[var(--color-ink)]">编辑文章</h1>
-        <p className="mt-3 text-sm text-[var(--color-text)]">
-          可继续修改正文、分类、标签和发布状态。摘要为空时会自动补充；AI 正确性评论由表单开关控制。
-        </p>
-        <div className="mt-8">
-          <AdminPostForm token={token} mode="edit" initialPost={post} />
-        </div>
-      </SurfaceCard>
-    </main>
-  );
+  return <AdminPostForm token={token} mode="edit" initialPost={post} />;
 }
