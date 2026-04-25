@@ -10,7 +10,6 @@ export const metadata: Metadata = {
 const navItems = [
   { href: "/", label: "首页" },
   { href: "/knowledge", label: "知识库" },
-  { href: "/search", label: "搜索" },
   { href: "/archives", label: "归档" },
   { href: "/about", label: "关于我" },
   { href: "/guestbook", label: "留言板" },

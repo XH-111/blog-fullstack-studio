@@ -24,6 +24,10 @@ export default function AdminDashboardPage() {
   const [message, setMessage] = useState("");
   const [isPostsOpen, setIsPostsOpen] = useState(false);
   const [isGuestbookOpen, setIsGuestbookOpen] = useState(false);
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [guestbookSearch, setGuestbookSearch] = useState("");
   const [token] = useState(
     () =>
@@ -154,6 +158,30 @@ export default function AdminDashboardPage() {
     await loadGuestbookMessages();
   }
 
+  async function handleChangePassword(event: React.FormEvent) {
+    event.preventDefault();
+
+    if (newPassword !== confirmPassword) {
+      setMessage("两次输入的新密码不一致");
+      return;
+    }
+
+    try {
+      await apiFetch("/api/auth/password", {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setMessage("密码已更新，下次登录请使用新密码");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "修改密码失败");
+    }
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -168,7 +196,7 @@ export default function AdminDashboardPage() {
             站点设置
           </Link>
           <Link href="/admin/taxonomies" className="rounded-full border border-[var(--color-line)] bg-white/88 px-5 py-2.5 text-sm">
-            分类管理
+            分类与标签
           </Link>
           <Link href="/admin/posts/new" className="rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white">
             新建文章
@@ -191,6 +219,65 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       )}
+
+      <SurfaceCard>
+        <button
+          type="button"
+          onClick={() => setIsPasswordOpen((current) => !current)}
+          className="flex w-full items-center justify-between gap-4 text-left"
+        >
+          <div>
+            <h2 className="font-serif text-3xl text-[var(--color-ink)]">账号安全</h2>
+            <p className="mt-1 text-sm text-[var(--color-text-faint)]">
+              修改当前管理员登录密码。
+            </p>
+          </div>
+          <span className="rounded-full border border-[var(--color-line)] bg-white px-4 py-2 text-sm text-[var(--color-text)]">
+            {isPasswordOpen ? "收起" : "更改密码"}
+          </span>
+        </button>
+
+        {isPasswordOpen && (
+          <form onSubmit={handleChangePassword} className="mt-5 grid gap-4 md:grid-cols-3">
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              autoComplete="current-password"
+              placeholder="当前密码"
+              className="rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+              required
+            />
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              autoComplete="new-password"
+              placeholder="新密码，至少 8 位"
+              className="rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+              required
+            />
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              autoComplete="new-password"
+              placeholder="确认新密码"
+              className="rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
+              required
+            />
+            <div className="md:col-span-3 flex items-center justify-between gap-4">
+              <span className="text-sm text-[var(--color-text-faint)]">{message}</span>
+              <button
+                type="submit"
+                className="rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white"
+              >
+                保存新密码
+              </button>
+            </div>
+          </form>
+        )}
+      </SurfaceCard>
 
       <SurfaceCard>
         <button
