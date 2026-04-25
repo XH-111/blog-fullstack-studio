@@ -52,6 +52,17 @@ model HomeReaction {
   updatedAt DateTime @updatedAt
 }
 
+model AboutProfile {
+  id          String   @id @default("about")
+  introTitle  String
+  introBody   String
+  skills      String
+  experiences String
+  projects    String
+  honors      String
+  updatedAt   DateTime @updatedAt
+}
+
 model Category {
   id        Int      @id @default(autoincrement())
   name      String   @unique
@@ -84,6 +95,7 @@ model Post {
   isFeatured        Boolean             @default(false)
   publishedAt       DateTime?
   viewCount         Int                 @default(0)
+  likeCount         Int                 @default(0)
   categoryId        Int
   category          Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   postTags          PostTag[]

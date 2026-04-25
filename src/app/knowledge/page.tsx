@@ -8,11 +8,24 @@ import { SurfaceCard } from "@/components/surface-card";
 import { resolveCoverImage } from "@/lib/cover-image";
 import { pastelChips } from "@/lib/theme";
 
+type SortMode = "time" | "likes" | "comments";
+
+const sortOptions: Array<{ value: SortMode; label: string }> = [
+  { value: "time", label: "按时间排序" },
+  { value: "likes", label: "按点赞排序" },
+  { value: "comments", label: "按评论排序" },
+];
+
+function dateValue(post: PostRecord) {
+  return new Date(post.publishedAt || post.createdAt).getTime();
+}
+
 export default function KnowledgePage() {
   const [posts, setPosts] = useState<PostRecord[]>([]);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [keyword, setKeyword] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [sortMode, setSortMode] = useState<SortMode>("time");
 
   useEffect(() => {
     Promise.all([
@@ -29,22 +42,39 @@ export default function KnowledgePage() {
   const filteredPosts = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
-    return posts.filter((post) => {
-      const matchesCategory =
-        activeCategory === "all" || post.category.slug === activeCategory;
-      const matchesKeyword =
-        !normalizedKeyword ||
-        [post.title, post.excerpt, post.category.name, ...post.tags.map((tag) => tag.name)]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedKeyword);
+    return posts
+      .filter((post) => {
+        const matchesCategory =
+          activeCategory === "all" || post.category.slug === activeCategory;
+        const matchesKeyword =
+          !normalizedKeyword ||
+          [
+            post.title,
+            post.excerpt,
+            post.category.name,
+            ...post.tags.map((tag) => tag.name),
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalizedKeyword);
 
-      return matchesCategory && matchesKeyword;
-    });
-  }, [activeCategory, keyword, posts]);
+        return matchesCategory && matchesKeyword;
+      })
+      .sort((a, b) => {
+        if (sortMode === "likes") {
+          return b.likeCount - a.likeCount || dateValue(b) - dateValue(a);
+        }
+
+        if (sortMode === "comments") {
+          return b.commentCount - a.commentCount || dateValue(b) - dateValue(a);
+        }
+
+        return dateValue(b) - dateValue(a);
+      });
+  }, [activeCategory, keyword, posts, sortMode]);
 
   const totalViews = posts.reduce((sum, post) => sum + post.viewCount, 0);
-  const totalComments = posts.reduce((sum, post) => sum + post.commentCount, 0);
+  const totalLikes = posts.reduce((sum, post) => sum + post.likeCount, 0);
 
   return (
     <main className="flex flex-1 flex-col pb-20">
@@ -66,16 +96,28 @@ export default function KnowledgePage() {
               </h1>
               <div className="mt-5 grid grid-cols-3 gap-3 text-center">
                 <div className="rounded-[18px] bg-white/74 p-3">
-                  <p className="font-serif text-2xl text-[var(--color-ink)]">{posts.length}</p>
-                  <p className="mt-1 text-xs text-[var(--color-text-faint)]">文章</p>
+                  <p className="font-serif text-2xl text-[var(--color-ink)]">
+                    {posts.length}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+                    文章
+                  </p>
                 </div>
                 <div className="rounded-[18px] bg-white/74 p-3">
-                  <p className="font-serif text-2xl text-[var(--color-ink)]">{totalViews}</p>
-                  <p className="mt-1 text-xs text-[var(--color-text-faint)]">阅读</p>
+                  <p className="font-serif text-2xl text-[var(--color-ink)]">
+                    {totalViews}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+                    阅读
+                  </p>
                 </div>
                 <div className="rounded-[18px] bg-white/74 p-3">
-                  <p className="font-serif text-2xl text-[var(--color-ink)]">{totalComments}</p>
-                  <p className="mt-1 text-xs text-[var(--color-text-faint)]">评论</p>
+                  <p className="font-serif text-2xl text-[var(--color-ink)]">
+                    {totalLikes}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+                    点赞
+                  </p>
                 </div>
               </div>
             </SurfaceCard>
@@ -90,6 +132,28 @@ export default function KnowledgePage() {
                 placeholder="搜索标题、摘要、标签"
                 className="mt-4 w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 text-sm outline-none"
               />
+            </SurfaceCard>
+
+            <SurfaceCard>
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent)]">
+                Sort
+              </p>
+              <div className="mt-4 grid gap-2">
+                {sortOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSortMode(option.value)}
+                    className={`rounded-[18px] border px-4 py-3 text-left text-sm ${
+                      sortMode === option.value
+                        ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
+                        : "border-[var(--color-line)] bg-white/88 text-[var(--color-text)]"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </SurfaceCard>
 
             <SurfaceCard>
@@ -140,7 +204,7 @@ export default function KnowledgePage() {
                     技术文章与项目沉淀
                   </h2>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--color-text)]">
-                    这里集中展示所有文章。你可以按分类筛选，也可以直接搜索标题、摘要或标签。
+                    这里集中展示所有文章。可以按分类筛选，也可以按时间、点赞数或评论数排序。
                   </p>
                 </div>
                 <span className="rounded-full bg-[var(--color-accent)]/10 px-4 py-2 text-sm text-[var(--color-accent)]">
@@ -165,7 +229,9 @@ export default function KnowledgePage() {
                   <div className="p-5">
                     <span
                       className="rounded-full px-3 py-1 text-xs font-medium text-[var(--color-ink)]"
-                      style={{ backgroundColor: pastelChips[index % pastelChips.length] }}
+                      style={{
+                        backgroundColor: pastelChips[index % pastelChips.length],
+                      }}
                     >
                       {post.category.name}
                     </span>
@@ -175,13 +241,15 @@ export default function KnowledgePage() {
                     <p className="mt-3 line-clamp-4 text-sm leading-7 text-[var(--color-text)]">
                       {post.excerpt}
                     </p>
-                    <div className="mt-5 flex items-center justify-between text-xs text-[var(--color-text-faint)]">
+                    <div className="mt-5 flex items-center justify-between gap-3 text-xs text-[var(--color-text-faint)]">
                       <span>
                         {post.publishedAt
                           ? new Date(post.publishedAt).toLocaleDateString("zh-CN")
                           : "未发布"}
                       </span>
-                      <span>{post.commentCount} 条评论</span>
+                      <span>
+                        {post.likeCount} 赞 · {post.commentCount} 评论
+                      </span>
                     </div>
                   </div>
                 </Link>
@@ -190,7 +258,9 @@ export default function KnowledgePage() {
 
             {filteredPosts.length === 0 && (
               <SurfaceCard>
-                <p className="text-sm text-[var(--color-text)]">没有找到匹配的文章。</p>
+                <p className="text-sm text-[var(--color-text)]">
+                  没有找到匹配的文章。
+                </p>
               </SurfaceCard>
             )}
           </div>

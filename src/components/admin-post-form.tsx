@@ -16,6 +16,25 @@ type AdminPostFormProps = {
 
 type SaveState = "idle" | "saving-draft" | "saving-published";
 
+function toDatetimeLocalValue(value?: string | null) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const timezoneOffset = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
+
+function toIsoFromDatetimeLocal(value: string) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) {
   const router = useRouter();
   const coverInputRef = useRef<HTMLInputElement | null>(null);
@@ -32,6 +51,9 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
     initialPost?.contentText || initialPost?.contentMarkdown || ""
   );
   const [categoryId, setCategoryId] = useState<number>(initialPost?.category.id || 0);
+  const [publishedAt, setPublishedAt] = useState(
+    toDatetimeLocalValue(initialPost?.publishedAt)
+  );
   const [selectedTags, setSelectedTags] = useState<string[]>(
     initialPost?.tags.map((tag) => tag.name) || []
   );
@@ -191,6 +213,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
         contentText,
         contentMarkdown: contentText,
         categoryId,
+        publishedAt: toIsoFromDatetimeLocal(publishedAt),
         tags: selectedTags,
         status: nextStatus,
         generateAiComment,
@@ -311,6 +334,21 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                       </option>
                     ))}
                   </select>
+                </label>
+
+                <label className="block space-y-2 text-sm text-[var(--color-text)]">
+                  <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
+                    发布时间
+                  </span>
+                  <input
+                    type="datetime-local"
+                    value={publishedAt}
+                    onChange={(event) => setPublishedAt(event.target.value)}
+                    className="w-full rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-3 text-sm outline-none"
+                  />
+                  <span className="block text-xs leading-5 text-[var(--color-text-faint)]">
+                    不修改时默认使用当前时间；修改后按这里的时间发布。
+                  </span>
                 </label>
 
                 <section className="space-y-3 text-sm text-[var(--color-text)]">

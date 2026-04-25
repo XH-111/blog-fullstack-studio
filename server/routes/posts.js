@@ -142,6 +142,7 @@ function mapPost(post) {
     isFeatured: post.isFeatured,
     publishedAt: post.publishedAt,
     viewCount: post.viewCount,
+    likeCount: post.likeCount,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     contentMarkdown: post.contentMarkdown,
@@ -169,6 +170,13 @@ async function buildPostPayload(body, ignoreId) {
   const contentMarkdown = String(body.contentMarkdown || contentText || "").trim();
   const categoryId = Number(body.categoryId);
   const coverImage = String(body.coverImage || "").trim() || null;
+  const requestedPublishedAt = body.publishedAt
+    ? new Date(String(body.publishedAt))
+    : null;
+  const publishedAt =
+    requestedPublishedAt && !Number.isNaN(requestedPublishedAt.getTime())
+      ? requestedPublishedAt
+      : null;
   const requestedExcerpt = String(body.excerpt || "").trim();
   const excerpt =
     requestedExcerpt ||
@@ -193,6 +201,7 @@ async function buildPostPayload(body, ignoreId) {
     categoryId,
     tags: Array.isArray(body.tags) ? body.tags : [],
     status: body.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+    publishedAt,
     generateAiComment: body.generateAiComment === true,
     slug: await buildUniqueSlug(title, ignoreId),
   };
@@ -313,6 +322,31 @@ router.get("/:slug", async (req, res) => {
   res.json(mapPost(post));
 });
 
+router.patch("/:id/like", async (req, res) => {
+  const postId = Number(req.params.id);
+
+  if (!Number.isInteger(postId)) {
+    return res.status(400).json({ message: "文章 ID 不正确" });
+  }
+
+  const existing = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { id: true, status: true },
+  });
+
+  if (!existing || existing.status !== "PUBLISHED") {
+    return res.status(404).json({ message: "文章不存在" });
+  }
+
+  const updated = await prisma.post.update({
+    where: { id: postId },
+    data: { likeCount: { increment: 1 } },
+    select: { id: true, likeCount: true },
+  });
+
+  res.json(updated);
+});
+
 router.post("/", requireAdmin, async (req, res) => {
   const payload = await buildPostPayload(req.body || {});
 
@@ -333,7 +367,7 @@ router.post("/", requireAdmin, async (req, res) => {
       contentText: payload.contentText,
       categoryId: payload.categoryId,
       status: payload.status,
-      publishedAt: isPublished ? new Date() : null,
+      publishedAt: isPublished ? payload.publishedAt || new Date() : null,
     },
   });
 
@@ -376,7 +410,7 @@ router.put("/:id", requireAdmin, async (req, res) => {
       contentText: payload.contentText,
       categoryId: payload.categoryId,
       status: payload.status,
-      publishedAt: isPublished ? existing.publishedAt || new Date() : null,
+      publishedAt: isPublished ? payload.publishedAt || existing.publishedAt || new Date() : null,
     },
   });
 

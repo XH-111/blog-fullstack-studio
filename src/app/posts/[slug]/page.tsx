@@ -10,6 +10,8 @@ export default function PostDetailPage() {
   const params = useParams<{ slug: string }>();
   const [post, setPost] = useState<PostRecord | null>(null);
   const [error, setError] = useState("");
+  const [isLiking, setIsLiking] = useState(false);
+  const [hasLiked, setHasLiked] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -19,6 +21,10 @@ export default function PostDetailPage() {
         if (alive) {
           setPost(result);
           setError("");
+          setHasLiked(
+            typeof window !== "undefined" &&
+              localStorage.getItem(`liked_post_${result.id}`) === "true"
+          );
         }
       })
       .catch((err) => {
@@ -39,6 +45,29 @@ export default function PostDetailPage() {
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "文章加载失败");
+    }
+  }
+
+  async function handleLike() {
+    if (!post || isLiking || hasLiked) {
+      return;
+    }
+
+    setIsLiking(true);
+    try {
+      const result = await apiFetch<{ id: number; likeCount: number }>(
+        `/api/posts/${post.id}/like`,
+        { method: "PATCH" }
+      );
+      setPost((current) =>
+        current ? { ...current, likeCount: result.likeCount } : current
+      );
+      localStorage.setItem(`liked_post_${post.id}`, "true");
+      setHasLiked(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "点赞失败");
+    } finally {
+      setIsLiking(false);
     }
   }
 
@@ -84,6 +113,8 @@ export default function PostDetailPage() {
               </span>
               <span className="h-1 w-1 rounded-full bg-current" />
               <span>{post.viewCount} 次阅读</span>
+              <span className="h-1 w-1 rounded-full bg-current" />
+              <span>{post.likeCount} 赞</span>
             </div>
             <h1 className="mt-5 max-w-4xl font-serif text-5xl font-semibold leading-tight text-[var(--color-ink)] md:text-6xl">
               {post.title}
@@ -103,6 +134,18 @@ export default function PostDetailPage() {
                 ))}
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => void handleLike()}
+              disabled={isLiking || hasLiked}
+              className="mt-6 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-65"
+            >
+              {hasLiked
+                ? `已点赞 ${post.likeCount}`
+                : isLiking
+                  ? "点赞中..."
+                  : `点赞 ${post.likeCount}`}
+            </button>
           </div>
         </div>
       </section>

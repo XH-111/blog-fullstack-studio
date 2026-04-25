@@ -92,6 +92,23 @@ export type SiteSettingsRecord = {
   updatedAt: string;
 };
 
+export type AboutHonorItem = {
+  title: string;
+  description: string;
+  image: string;
+};
+
+export type AboutProfileRecord = {
+  id: string;
+  introTitle: string;
+  introBody: string;
+  skills: string;
+  experiences: string;
+  projects: string;
+  honors: string;
+  updatedAt: string;
+};
+
 export type PostRecord = {
   id: number;
   title: string;
@@ -102,6 +119,7 @@ export type PostRecord = {
   isFeatured: boolean;
   publishedAt?: string | null;
   viewCount: number;
+  likeCount: number;
   createdAt: string;
   updatedAt: string;
   contentMarkdown: string;
