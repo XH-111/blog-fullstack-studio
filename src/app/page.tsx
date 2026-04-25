@@ -13,11 +13,11 @@ import { SurfaceCard } from "@/components/surface-card";
 import { pastelChips } from "@/lib/theme";
 
 const featureLabels = [
-  "极简高级",
+  "简洁首页",
   "后台写作",
   "分类管理",
   "Markdown 编辑",
-  "AI 审核",
+  "AI 正确性评论",
   "JVM 专栏",
 ];
 
@@ -58,9 +58,7 @@ export default function HomePage() {
         setCategories(categoryList);
         setSettings(settingsRecord);
       })
-      .catch((error) => {
-        console.error(error);
-      });
+      .catch(console.error);
   }, []);
 
   const filteredPosts = useMemo(() => {
@@ -118,37 +116,23 @@ export default function HomePage() {
 
                 <div className="mt-6 grid w-full grid-cols-3 gap-3 rounded-[22px] bg-white/72 p-4 text-center">
                   <div>
-                    <p className="text-lg font-semibold text-[var(--color-ink)]">
-                      {posts.length}
-                    </p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
-                      文章
-                    </p>
+                    <p className="text-lg font-semibold text-[var(--color-ink)]">{posts.length}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">文章</p>
                   </div>
                   <div>
-                    <p className="text-lg font-semibold text-[var(--color-ink)]">
-                      {categories.length}
-                    </p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
-                      分类
-                    </p>
+                    <p className="text-lg font-semibold text-[var(--color-ink)]">{categories.length}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">分类</p>
                   </div>
                   <div>
-                    <p className="text-lg font-semibold text-[var(--color-ink)]">
-                      {totalViews}
-                    </p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
-                      阅读
-                    </p>
+                    <p className="text-lg font-semibold text-[var(--color-ink)]">{totalViews}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">阅读</p>
                   </div>
                 </div>
               </div>
             </SurfaceCard>
 
             <SurfaceCard>
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">
-                搜索
-              </p>
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">搜索</p>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -165,9 +149,7 @@ export default function HomePage() {
 
             <SurfaceCard>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">
-                  分类
-                </p>
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">分类</p>
                 <Link
                   href="/admin/taxonomies"
                   className="text-xs text-[var(--color-text-faint)] transition hover:text-[var(--color-accent)]"
@@ -183,9 +165,7 @@ export default function HomePage() {
                     className="flex items-center justify-between rounded-[18px] border border-[var(--color-line)] bg-white/88 px-4 py-3 text-sm text-[var(--color-text)] transition hover:-translate-y-0.5"
                   >
                     <span>{category.name}</span>
-                    <span className="text-[var(--color-text-faint)]">
-                      {category._count?.posts || 0}
-                    </span>
+                    <span className="text-[var(--color-text-faint)]">{category._count?.posts || 0}</span>
                   </Link>
                 ))}
               </div>
@@ -196,21 +176,15 @@ export default function HomePage() {
             <SurfaceCard>
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-accent)]">
-                    欢迎光临
-                  </p>
+                  <p className="text-xs uppercase tracking-[0.28em] text-[var(--color-accent)]">欢迎光临</p>
                   <h2 className="mt-3 font-serif text-4xl text-[var(--color-ink)]">
                     一套可以长期写作、持续扩展、适合沉淀技术与生活的个人博客
                   </h2>
                   <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--color-text)]">
-                    这里会持续更新 Java、JVM、后端工程实践、项目复盘和个人成长记录。
-                    我更希望这不是一个只展示结果的站点，而是一份长期可读的个人工程档案。
+                    这里会持续更新 Java、JVM、后端工程实践、项目复盘和个人成长记录。它不是只展示结果的站点，而是一份长期可读的个人工程档案。
                   </p>
                 </div>
-                <Link
-                  href="/archives"
-                  className="rounded-full bg-[var(--color-accent)]/10 px-4 py-2 text-sm text-[var(--color-accent)]"
-                >
+                <Link href="/archives" className="rounded-full bg-[var(--color-accent)]/10 px-4 py-2 text-sm text-[var(--color-accent)]">
                   查看归档
                 </Link>
               </div>
@@ -251,12 +225,8 @@ export default function HomePage() {
                     >
                       {post.category.name}
                     </span>
-                    <h3 className="mt-4 font-serif text-2xl leading-tight text-[var(--color-ink)]">
-                      {post.title}
-                    </h3>
-                    <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
-                      {post.excerpt}
-                    </p>
+                    <h3 className="mt-4 font-serif text-2xl leading-tight text-[var(--color-ink)]">{post.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">{post.excerpt}</p>
                     <div className="mt-5 flex items-center justify-between text-xs text-[var(--color-text-faint)]">
                       <span>
                         {post.publishedAt

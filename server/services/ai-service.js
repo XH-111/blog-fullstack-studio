@@ -15,7 +15,7 @@ function buildFallbackExcerpt(post) {
 }
 
 function buildFallbackCorrectnessComment(post) {
-  return `AI 正确性点评：这篇文章围绕《${post.title}》展开，整体结构清楚，但当前仅基于文内信息做静态判断，未发现明显自相矛盾之处。若文中涉及 JVM 参数、版本差异或具体结论，仍建议结合官方文档和实际日志再次核对。`;
+  return `AI 正确性评论：这篇文章围绕《${post.title}》展开，整体结构清楚。当前仅基于文内信息做静态判断，未发现明显自相矛盾之处；如涉及版本差异、参数结论或线上环境，仍建议结合官方文档和实际日志再次核对。`;
 }
 
 async function callExternalModel(prompt) {
@@ -62,7 +62,7 @@ async function generateExcerpt(post) {
 
 要求：
 1. 只输出摘要文本，不要加标题和引号。
-2. 用中文，控制在 50 到 90 个字。
+2. 使用中文，控制在 50 到 90 个字。
 3. 优先说明文章主题、解决的问题和适合的读者。
 
 标题：${post.title}

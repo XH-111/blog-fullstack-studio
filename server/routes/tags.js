@@ -34,7 +34,7 @@ router.post("/", requireAdmin, async (req, res) => {
   });
 
   if (existed) {
-    return res.status(409).json({ message: "这个标签已经存在了" });
+    return res.status(409).json({ message: "这个标签已经存在" });
   }
 
   const tag = await prisma.tag.create({

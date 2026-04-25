@@ -36,12 +36,8 @@ export default function CategoryPage() {
               <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">
                 {post.category.name}
               </p>
-              <h2 className="mt-3 font-serif text-2xl text-[var(--color-ink)]">
-                {post.title}
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
-                {post.excerpt}
-              </p>
+              <h2 className="mt-3 font-serif text-2xl text-[var(--color-ink)]">{post.title}</h2>
+              <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">{post.excerpt}</p>
             </SurfaceCard>
           </Link>
         ))}

@@ -23,12 +23,7 @@ export function CommentForm({ postId, onSubmitted }: CommentFormProps) {
     try {
       await apiFetch("/api/comments", {
         method: "POST",
-        body: JSON.stringify({
-          postId,
-          authorName,
-          email,
-          content,
-        }),
+        body: JSON.stringify({ postId, authorName, email, content }),
       });
       setAuthorName("");
       setEmail("");

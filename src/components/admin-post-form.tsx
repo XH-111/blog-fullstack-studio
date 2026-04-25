@@ -13,23 +13,15 @@ type AdminPostFormProps = {
 
 type SaveState = "idle" | "saving-draft" | "saving-published";
 
-export function AdminPostForm({
-  token,
-  mode,
-  initialPost,
-}: AdminPostFormProps) {
+export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) {
   const router = useRouter();
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [tags, setTags] = useState<TagRecord[]>([]);
   const [title, setTitle] = useState(initialPost?.title || "");
   const [excerpt, setExcerpt] = useState(initialPost?.excerpt || "");
   const [coverImage, setCoverImage] = useState(initialPost?.coverImage || "");
-  const [contentMarkdown, setContentMarkdown] = useState(
-    initialPost?.contentMarkdown || ""
-  );
-  const [categoryId, setCategoryId] = useState<number>(
-    initialPost?.category.id || 0
-  );
+  const [contentMarkdown, setContentMarkdown] = useState(initialPost?.contentMarkdown || "");
+  const [categoryId, setCategoryId] = useState<number>(initialPost?.category.id || 0);
   const [selectedTags, setSelectedTags] = useState<string[]>(
     initialPost?.tags.map((tag) => tag.name) || []
   );
@@ -120,7 +112,7 @@ export function AdminPostForm({
       <textarea
         value={excerpt}
         onChange={(event) => setExcerpt(event.target.value)}
-        placeholder="文章摘要（可留空，发布时会由 AI 自动补充）"
+        placeholder="文章摘要（可留空，保存时会由 AI 自动补充；AI 不可用时使用本地摘要）"
         className="min-h-[110px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
       />
 
@@ -188,7 +180,7 @@ export function AdminPostForm({
 
       <div className="rounded-[24px] border border-[var(--color-line)] bg-[var(--color-panel-soft)] p-4">
         <p className="text-sm leading-7 text-[var(--color-text)]">
-          AI 审核会在每次保存时自动刷新。AI 评论现在是可选项，只会从内容正确性角度给出一条简短评论。
+          摘要为空时会自动补充。AI 正确性评论是可选项，只会从内容准确性角度生成一条简短评论；AI 审核报告已经移除。
         </p>
       </div>
 

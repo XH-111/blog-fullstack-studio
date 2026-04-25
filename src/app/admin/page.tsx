@@ -64,9 +64,7 @@ export default function AdminDashboardPage() {
       body: JSON.stringify({ status }),
     });
 
-    setPosts((current) =>
-      current.map((item) => (item.id === postId ? updated : item))
-    );
+    setPosts((current) => current.map((item) => (item.id === postId ? updated : item)));
   }
 
   return (
@@ -75,26 +73,17 @@ export default function AdminDashboardPage() {
         <div>
           <h1 className="font-serif text-4xl text-[var(--color-ink)]">内容后台</h1>
           <p className="mt-2 text-sm text-[var(--color-text)]">
-            在这里管理文章、分类和首页图片。发布和撤回可以直接在列表里操作，AI 审核功能已经移除。
+            在这里管理文章、分类、标签和首页图片。发布和撤回可以直接在列表里操作；AI 审核功能已经移除。
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link
-            href="/admin/settings"
-            className="rounded-full border border-[var(--color-line)] bg-white/88 px-5 py-2.5 text-sm"
-          >
+          <Link href="/admin/settings" className="rounded-full border border-[var(--color-line)] bg-white/88 px-5 py-2.5 text-sm">
             站点设置
           </Link>
-          <Link
-            href="/admin/taxonomies"
-            className="rounded-full border border-[var(--color-line)] bg-white/88 px-5 py-2.5 text-sm"
-          >
+          <Link href="/admin/taxonomies" className="rounded-full border border-[var(--color-line)] bg-white/88 px-5 py-2.5 text-sm">
             分类与标签
           </Link>
-          <Link
-            href="/admin/posts/new"
-            className="rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white"
-          >
+          <Link href="/admin/posts/new" className="rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white">
             新建文章
           </Link>
         </div>
@@ -109,9 +98,7 @@ export default function AdminDashboardPage() {
             ["标签数", summary.tagCount],
           ].map(([label, value]) => (
             <SurfaceCard key={String(label)}>
-              <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-text-faint)]">
-                {label}
-              </p>
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-text-faint)]">{label}</p>
               <p className="mt-4 font-serif text-4xl text-[var(--color-ink)]">{value}</p>
             </SurfaceCard>
           ))}
@@ -131,12 +118,8 @@ export default function AdminDashboardPage() {
                     <span>{isPublished ? "已发布" : "草稿"}</span>
                     <span>{post.commentCount} 条评论</span>
                   </div>
-                  <h2 className="mt-3 font-serif text-3xl text-[var(--color-ink)]">
-                    {post.title}
-                  </h2>
-                  <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
-                    {post.excerpt}
-                  </p>
+                  <h2 className="mt-3 font-serif text-3xl text-[var(--color-ink)]">{post.title}</h2>
+                  <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">{post.excerpt}</p>
                   {post.aiOfficialComment && (
                     <div className="mt-4 rounded-[20px] bg-[var(--color-panel-soft)] p-4 text-sm leading-7 text-[var(--color-text)]">
                       <p className="font-semibold text-[var(--color-ink)]">AI 正确性评论</p>
@@ -148,9 +131,7 @@ export default function AdminDashboardPage() {
                 <div className="flex flex-wrap gap-3 lg:max-w-[280px] lg:justify-end">
                   <button
                     type="button"
-                    onClick={() =>
-                      void handleStatusChange(post.id, isPublished ? "DRAFT" : "PUBLISHED")
-                    }
+                    onClick={() => void handleStatusChange(post.id, isPublished ? "DRAFT" : "PUBLISHED")}
                     className={`rounded-full px-4 py-2 text-sm font-semibold ${
                       isPublished
                         ? "border border-[var(--color-line)] bg-white text-[var(--color-ink)]"
@@ -159,10 +140,7 @@ export default function AdminDashboardPage() {
                   >
                     {isPublished ? "撤回为草稿" : "立即发布"}
                   </button>
-                  <Link
-                    href={`/admin/posts/${post.id}/edit`}
-                    className="rounded-full border border-[var(--color-line)] bg-white/88 px-4 py-2 text-sm"
-                  >
+                  <Link href={`/admin/posts/${post.id}/edit`} className="rounded-full border border-[var(--color-line)] bg-white/88 px-4 py-2 text-sm">
                     编辑
                   </Link>
                   <button

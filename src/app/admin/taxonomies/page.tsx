@@ -98,7 +98,7 @@ export default function TaxonomiesPage() {
       <div>
         <h1 className="font-serif text-4xl text-[var(--color-ink)]">分类与标签管理</h1>
         <p className="mt-2 text-sm text-[var(--color-text)]">
-          这里可以直接创建新分类和新标签。新建文章时会自动读取这些数据，不需要再手改数据库。
+          这里可以直接创建新分类和新标签。新建文章时会自动读取这些数据，不需要手动改数据库。
         </p>
       </div>
 
@@ -113,10 +113,7 @@ export default function TaxonomiesPage() {
               className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
               required
             />
-            <button
-              type="submit"
-              className="rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white"
-            >
+            <button type="submit" className="rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white">
               创建分类
             </button>
           </form>
@@ -145,19 +142,13 @@ export default function TaxonomiesPage() {
               className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
               required
             />
-            <button
-              type="submit"
-              className="rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white"
-            >
+            <button type="submit" className="rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white">
               创建标签
             </button>
           </form>
           <div className="mt-6 flex flex-wrap gap-3">
             {tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="rounded-full border border-[var(--color-line)] bg-white/88 px-4 py-2 text-sm"
-              >
+              <span key={tag.id} className="rounded-full border border-[var(--color-line)] bg-white/88 px-4 py-2 text-sm">
                 {tag.name}
               </span>
             ))}

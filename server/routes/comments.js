@@ -20,7 +20,7 @@ router.post("/", async (req, res) => {
   const { postId, authorName, email, content } = req.body || {};
 
   if (!postId || !authorName || !content) {
-    return res.status(400).json({ message: "评论参数不完整" });
+    return res.status(400).json({ message: "评论内容不能为空" });
   }
 
   const lastComment = await prisma.comment.findFirst({

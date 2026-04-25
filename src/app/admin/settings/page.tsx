@@ -42,9 +42,7 @@ export default function AdminSettingsPage() {
       });
   }, [router, token]);
 
-  async function handleProfileFileChange(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
+  async function handleProfileFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -63,8 +61,7 @@ export default function AdminSettingsPage() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        const imageDataUrl = reader.result;
-        setForm((current) => ({ ...current, profileImage: imageDataUrl }));
+        setForm((current) => ({ ...current, profileImage: reader.result as string }));
         setMessage("本地头像已载入，点击保存设置后生效");
       }
     };
@@ -107,7 +104,7 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="font-serif text-4xl text-[var(--color-ink)]">站点设置</h1>
         <p className="mt-2 text-sm text-[var(--color-text)]">
-          这里可以修改首页主视觉图片、个人头像、主标题和简介。头像支持直接从本地选择图片上传。
+          修改首页主视觉图片、个人头像、主标题和简介。头像支持直接从本地选择图片上传。
         </p>
       </div>
 
@@ -119,9 +116,7 @@ export default function AdminSettingsPage() {
                 <span>站点标题</span>
                 <input
                   value={form.siteTitle}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, siteTitle: event.target.value }))
-                  }
+                  onChange={(event) => setForm((current) => ({ ...current, siteTitle: event.target.value }))}
                   className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
                 />
               </label>
@@ -130,9 +125,7 @@ export default function AdminSettingsPage() {
                 <span>个人姓名</span>
                 <input
                   value={form.profileName}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, profileName: event.target.value }))
-                  }
+                  onChange={(event) => setForm((current) => ({ ...current, profileName: event.target.value }))}
                   className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
                 />
               </label>
@@ -142,9 +135,7 @@ export default function AdminSettingsPage() {
               <span>首页主标题</span>
               <input
                 value={form.heroTitle}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, heroTitle: event.target.value }))
-                }
+                onChange={(event) => setForm((current) => ({ ...current, heroTitle: event.target.value }))}
                 className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
               />
             </label>
@@ -153,12 +144,7 @@ export default function AdminSettingsPage() {
               <span>首页描述</span>
               <textarea
                 value={form.heroDescription}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    heroDescription: event.target.value,
-                  }))
-                }
+                onChange={(event) => setForm((current) => ({ ...current, heroDescription: event.target.value }))}
                 className="min-h-[120px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
               />
             </label>
@@ -167,12 +153,7 @@ export default function AdminSettingsPage() {
               <span>个人一句话简介</span>
               <input
                 value={form.profileTagline}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    profileTagline: event.target.value,
-                  }))
-                }
+                onChange={(event) => setForm((current) => ({ ...current, profileTagline: event.target.value }))}
                 className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
               />
             </label>
@@ -182,9 +163,7 @@ export default function AdminSettingsPage() {
                 <span>首页背景图 URL</span>
                 <input
                   value={form.heroImage || ""}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, heroImage: event.target.value }))
-                  }
+                  onChange={(event) => setForm((current) => ({ ...current, heroImage: event.target.value }))}
                   placeholder="https://..."
                   className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
                 />
@@ -201,20 +180,13 @@ export default function AdminSettingsPage() {
                 <div className="flex gap-2">
                   <input
                     value={form.profileImage || ""}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        profileImage: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => setForm((current) => ({ ...current, profileImage: event.target.value }))}
                     placeholder="也可以直接粘贴头像 URL"
                     className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 outline-none"
                   />
                   <button
                     type="button"
-                    onClick={() =>
-                      setForm((current) => ({ ...current, profileImage: "" }))
-                    }
+                    onClick={() => setForm((current) => ({ ...current, profileImage: "" }))}
                     className="rounded-[18px] border border-[var(--color-line)] bg-white px-4 py-3 text-sm"
                   >
                     清空
@@ -237,9 +209,7 @@ export default function AdminSettingsPage() {
         </SurfaceCard>
 
         <SurfaceCard className="overflow-hidden">
-          <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent)]">
-            预览
-          </p>
+          <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent)]">预览</p>
           <div
             className="mt-4 rounded-[24px] bg-cover bg-center p-5"
             style={{
@@ -266,12 +236,8 @@ export default function AdminSettingsPage() {
                   )}
                 </div>
                 <div>
-                  <p className="font-serif text-2xl text-[var(--color-ink)]">
-                    {form.siteTitle || "POETIZE"}
-                  </p>
-                  <p className="text-sm text-[var(--color-text)]">
-                    {form.profileName || "何晨旭"}
-                  </p>
+                  <p className="font-serif text-2xl text-[var(--color-ink)]">{form.siteTitle || "POETIZE"}</p>
+                  <p className="text-sm text-[var(--color-text)]">{form.profileName || "何晨旭"}</p>
                 </div>
               </div>
               <p className="mt-5 font-serif text-3xl leading-tight text-[var(--color-ink)]">

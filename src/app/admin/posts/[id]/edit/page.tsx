@@ -42,7 +42,7 @@ export default function EditPostPage() {
       <SurfaceCard>
         <h1 className="font-serif text-4xl text-[var(--color-ink)]">编辑文章</h1>
         <p className="mt-3 text-sm text-[var(--color-text)]">
-          每次保存都会重新执行 AI 内容审核，并刷新 AI 官方评论。适合在发布前多轮打磨内容。
+          可继续修改正文、分类、标签和发布状态。摘要为空时会自动补充；AI 正确性评论由表单开关控制。
         </p>
         <div className="mt-8">
           <AdminPostForm token={token} mode="edit" initialPost={post} />

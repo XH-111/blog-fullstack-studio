@@ -91,10 +91,7 @@ export default function PostDetailPage() {
           <h2 className="font-serif text-3xl text-[var(--color-ink)]">评论区</h2>
           <div className="mt-6 space-y-4">
             {post.comments?.map((comment) => (
-              <div
-                key={comment.id}
-                className="rounded-[20px] border border-[var(--color-line)] bg-white/88 p-4"
-              >
+              <div key={comment.id} className="rounded-[20px] border border-[var(--color-line)] bg-white/88 p-4">
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <p className="font-semibold text-[var(--color-ink)]">
                     {comment.authorName}
@@ -104,9 +101,7 @@ export default function PostDetailPage() {
                     #{comment.floor} · {new Date(comment.createdAt).toLocaleString("zh-CN")}
                   </p>
                 </div>
-                <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
-                  {comment.content}
-                </p>
+                <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">{comment.content}</p>
               </div>
             ))}
           </div>
