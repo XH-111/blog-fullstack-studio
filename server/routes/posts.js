@@ -6,6 +6,7 @@ const { toSlug } = require("../utils/slug");
 const {
   generateOfficialComment,
   generateExcerpt,
+  generateInterviewMarkdown,
 } = require("../services/ai-service");
 
 const router = express.Router();
@@ -75,7 +76,7 @@ async function deleteAiComment(postId) {
 }
 
 async function refreshAiArtifacts(post, options = {}) {
-  const { generateAiComment = false } = options;
+  const { generateAiComment = false, generateAiInterview = false } = options;
 
   await prisma.aiReview.deleteMany({
     where: { postId: post.id },
@@ -86,49 +87,68 @@ async function refreshAiArtifacts(post, options = {}) {
       where: { postId: post.id },
     });
     await deleteAiComment(post.id);
-    return;
-  }
+  } else {
+    const officialComment = await generateOfficialComment(post);
 
-  const officialComment = await generateOfficialComment(post);
-
-  await prisma.aiOfficialComment.upsert({
-    where: { postId: post.id },
-    update: { content: officialComment },
-    create: {
-      postId: post.id,
-      content: officialComment,
-    },
-  });
-
-  const existingAiComment = await prisma.comment.findFirst({
-    where: {
-      postId: post.id,
-      isAi: true,
-    },
-  });
-
-  if (existingAiComment) {
-    await prisma.comment.update({
-      where: { id: existingAiComment.id },
-      data: { content: officialComment },
+    await prisma.aiOfficialComment.upsert({
+      where: { postId: post.id },
+      update: { content: officialComment },
+      create: {
+        postId: post.id,
+        content: officialComment,
+      },
     });
-    return;
+
+    const existingAiComment = await prisma.comment.findFirst({
+      where: {
+        postId: post.id,
+        isAi: true,
+      },
+    });
+
+    if (existingAiComment) {
+      await prisma.comment.update({
+        where: { id: existingAiComment.id },
+        data: { content: officialComment },
+      });
+    } else {
+      const lastComment = await prisma.comment.findFirst({
+        where: { postId: post.id },
+        orderBy: { floor: "desc" },
+      });
+
+      await prisma.comment.create({
+        data: {
+          postId: post.id,
+          authorName: "AI 博客助手",
+          content: officialComment,
+          floor: (lastComment?.floor || 0) + 1,
+          isAi: true,
+        },
+      });
+    }
   }
 
-  const lastComment = await prisma.comment.findFirst({
-    where: { postId: post.id },
-    orderBy: { floor: "desc" },
-  });
+  if (!generateAiInterview) {
+    await prisma.aiInterview.deleteMany({
+      where: { postId: post.id },
+    });
+  } else {
+    const interviewMarkdown = await generateInterviewMarkdown(post);
 
-  await prisma.comment.create({
-    data: {
-      postId: post.id,
-      authorName: "AI 博客助手",
-      content: officialComment,
-      floor: (lastComment?.floor || 0) + 1,
-      isAi: true,
-    },
-  });
+    await prisma.aiInterview.upsert({
+      where: { postId: post.id },
+      update: {
+        contentMarkdown: interviewMarkdown,
+        contentHtml: renderMarkdown(interviewMarkdown),
+      },
+      create: {
+        postId: post.id,
+        contentMarkdown: interviewMarkdown,
+        contentHtml: renderMarkdown(interviewMarkdown),
+      },
+    });
+  }
 }
 
 function mapPost(post) {
@@ -152,6 +172,7 @@ function mapPost(post) {
     category: post.category,
     tags: post.postTags.map((item) => item.tag),
     aiOfficialComment: post.aiOfficialComment,
+    aiInterview: post.aiInterview,
     commentCount: post.comments.length,
     comments: post.comments,
   };
@@ -174,9 +195,7 @@ async function buildPostPayload(body, ignoreId) {
   const rawLikeCount = Number(body.likeCount);
   const viewCount = Number.isFinite(rawViewCount) ? Math.max(0, Math.floor(rawViewCount)) : 0;
   const likeCount = Number.isFinite(rawLikeCount) ? Math.max(0, Math.floor(rawLikeCount)) : 0;
-  const requestedPublishedAt = body.publishedAt
-    ? new Date(String(body.publishedAt))
-    : null;
+  const requestedPublishedAt = body.publishedAt ? new Date(String(body.publishedAt)) : null;
   const publishedAt =
     requestedPublishedAt && !Number.isNaN(requestedPublishedAt.getTime())
       ? requestedPublishedAt
@@ -209,6 +228,7 @@ async function buildPostPayload(body, ignoreId) {
     likeCount,
     publishedAt,
     generateAiComment: body.generateAiComment === true,
+    generateAiInterview: body.generateAiInterview === true,
     slug: await buildUniqueSlug(title, ignoreId),
   };
 }
@@ -221,6 +241,7 @@ async function fetchFullPost(postId) {
       postTags: { include: { tag: true } },
       aiReview: true,
       aiOfficialComment: true,
+      aiInterview: true,
       comments: true,
     },
   });
@@ -272,6 +293,7 @@ router.get("/", async (req, res) => {
       postTags: { include: { tag: true } },
       aiReview: true,
       aiOfficialComment: true,
+      aiInterview: true,
       comments: true,
     },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
@@ -310,6 +332,7 @@ router.get("/:slug", async (req, res) => {
       postTags: { include: { tag: true } },
       aiReview: true,
       aiOfficialComment: true,
+      aiInterview: true,
       comments: {
         orderBy: { createdAt: "asc" },
       },
@@ -384,6 +407,7 @@ router.post("/", requireAdmin, async (req, res) => {
   const fullPost = await fetchFullPost(post.id);
   await refreshAiArtifacts(fullPost, {
     generateAiComment: payload.generateAiComment,
+    generateAiInterview: payload.generateAiInterview,
   });
 
   const finalPost = await fetchFullPost(post.id);
@@ -429,6 +453,7 @@ router.put("/:id", requireAdmin, async (req, res) => {
   const fullPost = await fetchFullPost(post.id);
   await refreshAiArtifacts(fullPost, {
     generateAiComment: payload.generateAiComment,
+    generateAiInterview: payload.generateAiInterview,
   });
 
   const finalPost = await fetchFullPost(post.id);
@@ -449,8 +474,7 @@ router.patch("/:id/status", requireAdmin, async (req, res) => {
     data: {
       status,
       isFeatured: status === "PUBLISHED" ? existing.isFeatured : false,
-      publishedAt:
-        status === "PUBLISHED" ? existing.publishedAt || new Date() : null,
+      publishedAt: status === "PUBLISHED" ? existing.publishedAt || new Date() : null,
     },
   });
 

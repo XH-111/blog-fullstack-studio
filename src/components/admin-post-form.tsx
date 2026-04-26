@@ -131,6 +131,9 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
   const [generateAiComment, setGenerateAiComment] = useState(
     Boolean(initialPost?.aiOfficialComment)
   );
+  const [generateAiInterview, setGenerateAiInterview] = useState(
+    Boolean(initialPost?.aiInterview)
+  );
   const [message, setMessage] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
@@ -457,6 +460,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
               tags: selectedTags,
               status: nextStatus,
               generateAiComment,
+              generateAiInterview,
             }
           : {
               title,
@@ -473,6 +477,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
               tags: selectedTags,
               status: nextStatus,
               generateAiComment,
+              generateAiInterview,
             };
 
       if (mode === "create") {
@@ -828,6 +833,15 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                     type="checkbox"
                     checked={generateAiComment}
                     onChange={(event) => setGenerateAiComment(event.target.checked)}
+                    className="h-4 w-4 accent-[var(--color-accent)]"
+                  />
+                </label>
+                <label className="flex items-center justify-between gap-4 rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-3 text-sm text-[var(--color-text)]">
+                  <span>生成 AI 面试板块</span>
+                  <input
+                    type="checkbox"
+                    checked={generateAiInterview}
+                    onChange={(event) => setGenerateAiInterview(event.target.checked)}
                     className="h-4 w-4 accent-[var(--color-accent)]"
                   />
                 </label>

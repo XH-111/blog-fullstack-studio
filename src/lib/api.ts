@@ -156,6 +156,7 @@ export type PostRecord = {
   category: { id: number; name: string; slug: string };
   tags: Array<{ id: number; name: string; slug: string }>;
   aiOfficialComment?: { content: string } | null;
+  aiInterview?: { contentMarkdown: string; contentHtml: string } | null;
   commentCount: number;
   comments?: CommentRecord[];
 };

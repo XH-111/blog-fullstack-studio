@@ -175,6 +175,23 @@ export default function PostDetailPage() {
             </div>
           )}
 
+          {post.aiInterview && (
+            <div className="rounded-[28px] border border-white/70 bg-white/72 p-5 shadow-[var(--shadow-card)] backdrop-blur-xl">
+              <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent)]">
+                AI Interview
+              </p>
+              <h2 className="mt-2 font-serif text-2xl text-[var(--color-ink)]">
+                面试板块
+              </h2>
+              <div
+                className="rich-post-content mt-4 text-sm"
+                dangerouslySetInnerHTML={{
+                  __html: normalizeRenderedHtml(post.aiInterview.contentHtml),
+                }}
+              />
+            </div>
+          )}
+
           <div className="rounded-[28px] border border-white/70 bg-white/72 p-5 shadow-[var(--shadow-card)] backdrop-blur-xl">
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--color-accent)]">
               Comments
