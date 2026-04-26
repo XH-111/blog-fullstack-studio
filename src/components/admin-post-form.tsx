@@ -1,8 +1,9 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { JSONContent } from "@tiptap/react";
+import MarkdownIt from "markdown-it";
 import { useRouter } from "next/navigation";
 import { apiFetch, CategoryRecord, PostRecord, TagRecord } from "@/lib/api";
 import { defaultCoverImage, getEditableCoverImage } from "@/lib/cover-image";
@@ -15,6 +16,7 @@ type AdminPostFormProps = {
 };
 
 type SaveState = "idle" | "saving-draft" | "saving-published";
+type EditorMode = "rich" | "markdown";
 
 function toDatetimeLocalValue(value?: string | null) {
   const date = value ? new Date(value) : new Date();
@@ -35,33 +37,76 @@ function toIsoFromDatetimeLocal(value: string) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function parseNonNegativeInteger(value: string) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(parsed));
+}
+
+function buildPlainTextFromMarkdown(markdown: string) {
+  return markdown
+    .replace(/```[\s\S]*?```/g, (block) =>
+      block
+        .replace(/^```[^\n]*\n?/, "")
+        .replace(/\n?```$/, "")
+        .trim()
+    )
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .replace(/^>\s?/gm, "")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) {
   const router = useRouter();
   const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const markdownRenderer = useMemo(
+    () =>
+      new MarkdownIt({
+        html: true,
+        linkify: true,
+        breaks: true,
+      }),
+    []
+  );
+
+  const initialEditorMode: EditorMode = initialPost?.contentJson ? "rich" : "markdown";
+
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [tags, setTags] = useState<TagRecord[]>([]);
   const [title, setTitle] = useState(initialPost?.title || "");
   const [excerpt, setExcerpt] = useState(initialPost?.excerpt || "");
   const [coverImage, setCoverImage] = useState(getEditableCoverImage(initialPost?.coverImage));
-  const [contentJson, setContentJson] = useState<string | null>(
-    initialPost?.contentJson || null
-  );
+  const [contentJson, setContentJson] = useState<string | null>(initialPost?.contentJson || null);
   const [contentHtml, setContentHtml] = useState(initialPost?.contentHtml || "");
   const [contentText, setContentText] = useState(
     initialPost?.contentText || initialPost?.contentMarkdown || ""
   );
-  const [categoryId, setCategoryId] = useState<number>(initialPost?.category.id || 0);
-  const [publishedAt, setPublishedAt] = useState(
-    toDatetimeLocalValue(initialPost?.publishedAt)
+  const [markdownContent, setMarkdownContent] = useState(
+    initialPost?.contentMarkdown || initialPost?.contentText || ""
   );
+  const [editorMode, setEditorMode] = useState<EditorMode>(initialEditorMode);
+  const [richSeedJson, setRichSeedJson] = useState<string | null>(initialPost?.contentJson || null);
+  const [richSeedHtml, setRichSeedHtml] = useState(initialPost?.contentHtml || "");
+  const [richEditorVersion, setRichEditorVersion] = useState(0);
+  const [categoryId, setCategoryId] = useState<number>(initialPost?.category.id || 0);
+  const [viewCount, setViewCount] = useState<number>(initialPost?.viewCount ?? 0);
+  const [likeCount, setLikeCount] = useState<number>(initialPost?.likeCount ?? 0);
+  const [publishedAt, setPublishedAt] = useState(toDatetimeLocalValue(initialPost?.publishedAt));
   const [selectedTags, setSelectedTags] = useState<string[]>(
     initialPost?.tags.map((tag) => tag.name) || []
   );
   const [tagSelectId, setTagSelectId] = useState("");
   const [newTagName, setNewTagName] = useState("");
-  const [generateAiComment, setGenerateAiComment] = useState(
-    Boolean(initialPost?.aiOfficialComment)
-  );
+  const [generateAiComment, setGenerateAiComment] = useState(Boolean(initialPost?.aiOfficialComment));
   const [message, setMessage] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
@@ -89,6 +134,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
         if (!alive) {
           return;
         }
+
         setCategories(categoryList);
         setTags(tagList);
 
@@ -118,6 +164,32 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
     },
     []
   );
+
+  function switchEditorMode(nextMode: EditorMode) {
+    if (nextMode === editorMode) {
+      return;
+    }
+
+    if (nextMode === "markdown") {
+      if (!markdownContent.trim()) {
+        setMarkdownContent(contentText.trim());
+      }
+      setEditorMode(nextMode);
+      return;
+    }
+
+    const sourceMarkdown = markdownContent.trim();
+    if (sourceMarkdown) {
+      setRichSeedJson(null);
+      setRichSeedHtml(markdownRenderer.render(sourceMarkdown));
+      setContentJson(null);
+      setContentHtml(markdownRenderer.render(sourceMarkdown));
+      setContentText(buildPlainTextFromMarkdown(sourceMarkdown));
+      setRichEditorVersion((current) => current + 1);
+    }
+
+    setEditorMode(nextMode);
+  }
 
   function handleCoverChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -181,7 +253,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
       return;
     }
 
-    if (!window.confirm(`删除标签「${selectedTagRecord.name}」？已被文章使用的标签不会被删除。`)) {
+    if (!window.confirm(`删除标签“${selectedTagRecord.name}”吗？已被文章使用的标签不会被删除。`)) {
       return;
     }
 
@@ -204,20 +276,41 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
     setMessage("");
 
     try {
-      const payload = {
-        title,
-        excerpt,
-        coverImage,
-        contentJson,
-        contentHtml,
-        contentText,
-        contentMarkdown: contentText,
-        categoryId,
-        publishedAt: toIsoFromDatetimeLocal(publishedAt),
-        tags: selectedTags,
-        status: nextStatus,
-        generateAiComment,
-      };
+      const normalizedMarkdown = markdownContent.trim();
+      const payload =
+        editorMode === "markdown"
+          ? {
+              title,
+              excerpt,
+              coverImage,
+              contentJson: null,
+              contentHtml: "",
+              contentText: buildPlainTextFromMarkdown(normalizedMarkdown),
+              contentMarkdown: normalizedMarkdown,
+              categoryId,
+              viewCount,
+              likeCount,
+              publishedAt: toIsoFromDatetimeLocal(publishedAt),
+              tags: selectedTags,
+              status: nextStatus,
+              generateAiComment,
+            }
+          : {
+              title,
+              excerpt,
+              coverImage,
+              contentJson,
+              contentHtml,
+              contentText,
+              contentMarkdown: contentText,
+              categoryId,
+              viewCount,
+              likeCount,
+              publishedAt: toIsoFromDatetimeLocal(publishedAt),
+              tags: selectedTags,
+              status: nextStatus,
+              generateAiComment,
+            };
 
       if (mode === "create") {
         await apiFetch<PostRecord>("/api/posts", {
@@ -253,7 +346,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
               返回后台
             </Link>
             <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">
-              Word Style Editor
+              Writing Studio
             </p>
           </div>
 
@@ -266,18 +359,109 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                 className="w-full border-b border-[#d6d9de] bg-white px-8 py-6 font-serif text-4xl font-semibold leading-tight text-[var(--color-ink)] outline-none placeholder:text-[#a0a7b2]"
                 required
               />
-              <RichTextEditor
-                initialJson={initialPost?.contentJson}
-                initialHtml={initialPost?.contentHtml}
-                onChange={handleEditorChange}
-              />
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d6d9de] bg-[#f8f9fb] px-5 py-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => switchEditorMode("rich")}
+                    className={`rounded-[6px] px-4 py-2 text-sm font-semibold transition ${
+                      editorMode === "rich"
+                        ? "bg-[var(--color-accent)] text-white"
+                        : "border border-[#cfd4dc] bg-white text-[var(--color-text)]"
+                    }`}
+                  >
+                    富文本
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchEditorMode("markdown")}
+                    className={`rounded-[6px] px-4 py-2 text-sm font-semibold transition ${
+                      editorMode === "markdown"
+                        ? "bg-[var(--color-accent)] text-white"
+                        : "border border-[#cfd4dc] bg-white text-[var(--color-text)]"
+                    }`}
+                  >
+                    Markdown
+                  </button>
+                </div>
+                <p className="text-xs text-[var(--color-text-faint)]">
+                  技术文章更适合 Markdown，可直接用 `#`、`##` 和 ```代码块```。
+                </p>
+              </div>
+
+              {editorMode === "rich" ? (
+                <RichTextEditor
+                  key={`rich-editor-${richEditorVersion}`}
+                  initialJson={richSeedJson}
+                  initialHtml={richSeedHtml}
+                  onChange={handleEditorChange}
+                />
+              ) : (
+                <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_260px]">
+                  <div className="bg-[#dfe3e8] p-4 md:p-8">
+                    <div className="mx-auto max-w-[860px] overflow-hidden bg-white shadow-[0_8px_30px_rgba(15,23,42,0.18)]">
+                      <textarea
+                        value={markdownContent}
+                        onChange={(event) => setMarkdownContent(event.target.value)}
+                        placeholder={[
+                          "# 标题",
+                          "",
+                          "## 小节",
+                          "",
+                          "这里写正文。",
+                          "",
+                          "```java",
+                          "public class Demo {",
+                          "    public static void main(String[] args) {",
+                          '        System.out.println(\"hello\");',
+                          "    }",
+                          "}",
+                          "```",
+                        ].join("\n")}
+                        className="min-h-[960px] w-full resize-none border-0 bg-white px-10 py-10 font-mono text-[15px] leading-8 text-[var(--color-ink)] outline-none"
+                        spellCheck={false}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[#d6d9de] bg-[#f8f9fb] p-5 lg:border-l lg:border-t-0">
+                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">
+                      Markdown Tips
+                    </p>
+                    <div className="mt-4 space-y-4 text-sm leading-7 text-[var(--color-text)]">
+                      <div className="rounded-[8px] border border-[#d6d9de] bg-white px-4 py-3">
+                        <p className="font-semibold text-[var(--color-ink)]">标题</p>
+                        <p># 一级标题</p>
+                        <p>## 二级标题</p>
+                      </div>
+                      <div className="rounded-[8px] border border-[#d6d9de] bg-white px-4 py-3">
+                        <p className="font-semibold text-[var(--color-ink)]">强调</p>
+                        <p>`行内代码`</p>
+                        <p>**加粗**</p>
+                      </div>
+                      <div className="rounded-[8px] border border-[#d6d9de] bg-white px-4 py-3">
+                        <p className="font-semibold text-[var(--color-ink)]">代码块</p>
+                        <p>```java</p>
+                        <p>System.out.println("hello");</p>
+                        <p>```</p>
+                      </div>
+                      <div className="rounded-[8px] border border-[#d6d9de] bg-white px-4 py-3">
+                        <p className="font-semibold text-[var(--color-ink)]">列表 / 引用</p>
+                        <p>- 列表项</p>
+                        <p>&gt; 引用内容</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
 
             <aside className="h-fit rounded-[10px] border border-[#d6d9de] bg-[#f8f9fb] p-5 shadow-[0_18px_55px_rgba(15,23,42,0.10)] lg:sticky lg:top-24">
               <p className="text-xs uppercase tracking-[0.26em] text-[var(--color-accent)]">
                 Document
               </p>
-              <h2 className="mt-2 font-serif text-2xl text-[var(--color-ink)]">文档属性</h2>
+              <h2 className="mt-2 font-serif text-2xl text-[var(--color-ink)]">文章属性</h2>
 
               <div className="mt-6 space-y-5">
                 <section className="space-y-2 text-sm text-[var(--color-text)]">
@@ -296,7 +480,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                     ref={coverInputRef}
                     type="file"
                     accept="image/*"
-                    className="absolute -left-[9999px] h-px w-px opacity-0 pointer-events-none"
+                    className="pointer-events-none absolute -left-[9999px] h-px w-px opacity-0"
                     onChange={handleCoverChange}
                   />
                   <div className="flex gap-2">
@@ -350,6 +534,36 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                     不修改时默认使用当前时间；修改后按这里的时间发布。
                   </span>
                 </label>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="block space-y-2 text-sm text-[var(--color-text)]">
+                    <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
+                      阅读量
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={viewCount}
+                      onChange={(event) => setViewCount(parseNonNegativeInteger(event.target.value))}
+                      className="w-full rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-3 text-sm outline-none"
+                    />
+                  </label>
+
+                  <label className="block space-y-2 text-sm text-[var(--color-text)]">
+                    <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
+                      点赞数
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={likeCount}
+                      onChange={(event) => setLikeCount(parseNonNegativeInteger(event.target.value))}
+                      className="w-full rounded-[6px] border border-[#cfd4dc] bg-white px-4 py-3 text-sm outline-none"
+                    />
+                  </label>
+                </div>
 
                 <section className="space-y-3 text-sm text-[var(--color-text)]">
                   <span className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
@@ -409,9 +623,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                         key={tagName}
                         type="button"
                         onClick={() =>
-                          setSelectedTags((current) =>
-                            current.filter((name) => name !== tagName)
-                          )
+                          setSelectedTags((current) => current.filter((name) => name !== tagName))
                         }
                         className="rounded-[6px] border border-[#cfd4dc] bg-white px-3 py-1 text-xs text-[var(--color-text)]"
                       >

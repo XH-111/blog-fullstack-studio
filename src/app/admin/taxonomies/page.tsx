@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, CategoryRecord, TagRecord } from "@/lib/api";
 import { SurfaceCard } from "@/components/surface-card";
@@ -58,7 +58,7 @@ export default function TaxonomiesPage() {
     };
   }, [router, token]);
 
-  async function handleCreateCategory(event: React.FormEvent) {
+  async function handleCreateCategory(event: FormEvent) {
     event.preventDefault();
     setMessage("");
 
@@ -76,7 +76,33 @@ export default function TaxonomiesPage() {
     }
   }
 
-  async function handleCreateTag(event: React.FormEvent) {
+  async function handleDeleteCategory(category: CategoryRecord) {
+    const usageCount = category._count?.posts || 0;
+
+    if (usageCount > 0) {
+      setMessage("该分类下还有文章，暂时不能删除。请先调整相关文章分类。");
+      return;
+    }
+
+    if (!window.confirm(`确认删除分类“${category.name}”吗？`)) {
+      return;
+    }
+
+    setMessage("");
+
+    try {
+      await apiFetch(`/api/categories/${category.id}`, {
+        method: "DELETE",
+        token,
+      });
+      setMessage("分类已删除");
+      await loadTaxonomies();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "删除分类失败");
+    }
+  }
+
+  async function handleCreateTag(event: FormEvent) {
     event.preventDefault();
     setMessage("");
 
@@ -95,7 +121,9 @@ export default function TaxonomiesPage() {
   }
 
   async function handleDeleteTag(tag: TagRecord) {
-    if (!window.confirm(`确认删除标签「${tag.name}」？已被文章使用的标签不能删除。`)) {
+    const usageCount = tag._count?.postTags || 0;
+
+    if (!window.confirm(`确认删除标签“${tag.name}”吗？已被文章使用的标签不能删除。`)) {
       return;
     }
 
@@ -118,7 +146,7 @@ export default function TaxonomiesPage() {
       <div>
         <h1 className="font-serif text-4xl text-[var(--color-ink)]">分类与标签管理</h1>
         <p className="mt-2 text-sm text-[var(--color-text)]">
-          分类用于知识库文章归档；标签既可以在这里维护，也可以在文章编辑页里新建或删除。
+          分类用于知识库文章归档；标签可在这里维护，也可以在文章编辑页中直接新增或删除。
         </p>
       </div>
 
@@ -142,17 +170,37 @@ export default function TaxonomiesPage() {
           </form>
 
           <div className="mt-6 space-y-3">
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                className="flex items-center justify-between rounded-[18px] border border-[var(--color-line)] bg-white/88 px-4 py-3 text-sm"
-              >
-                <span>{category.name}</span>
-                <span className="text-[var(--color-text-faint)]">
-                  {category._count?.posts || 0} 篇
-                </span>
-              </div>
-            ))}
+            {categories.map((category) => {
+              const usageCount = category._count?.posts || 0;
+
+              return (
+                <div
+                  key={category.id}
+                  className="flex items-center justify-between gap-3 rounded-[18px] border border-[var(--color-line)] bg-white/88 px-4 py-3 text-sm"
+                >
+                  <div>
+                    <p className="text-[var(--color-ink)]">{category.name}</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+                      {usageCount} 篇文章
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteCategory(category)}
+                    disabled={usageCount > 0}
+                    className="rounded-full border border-[var(--color-rose)] bg-white px-4 py-2 text-xs text-[#b44a5a] disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    删除
+                  </button>
+                </div>
+              );
+            })}
+
+            {categories.length === 0 && (
+              <p className="rounded-[18px] border border-[var(--color-line)] bg-white/88 px-4 py-3 text-sm text-[var(--color-text-faint)]">
+                还没有分类。
+              </p>
+            )}
           </div>
         </SurfaceCard>
 

@@ -48,4 +48,35 @@ router.post("/", requireAdmin, async (req, res) => {
   res.json(category);
 });
 
+router.delete("/:id", requireAdmin, async (req, res) => {
+  const categoryId = Number(req.params.id);
+
+  if (!Number.isInteger(categoryId)) {
+    return res.status(400).json({ message: "分类 ID 不正确" });
+  }
+
+  const existing = await prisma.category.findUnique({
+    where: { id: categoryId },
+    include: {
+      _count: {
+        select: { posts: true },
+      },
+    },
+  });
+
+  if (!existing) {
+    return res.status(404).json({ message: "分类不存在" });
+  }
+
+  if ((existing._count?.posts || 0) > 0) {
+    return res.status(400).json({ message: "该分类下还有文章，不能直接删除" });
+  }
+
+  await prisma.category.delete({
+    where: { id: categoryId },
+  });
+
+  res.json({ success: true });
+});
+
 module.exports = router;

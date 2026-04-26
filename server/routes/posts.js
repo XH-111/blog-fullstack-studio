@@ -170,6 +170,10 @@ async function buildPostPayload(body, ignoreId) {
   const contentMarkdown = String(body.contentMarkdown || contentText || "").trim();
   const categoryId = Number(body.categoryId);
   const coverImage = String(body.coverImage || "").trim() || null;
+  const rawViewCount = Number(body.viewCount);
+  const rawLikeCount = Number(body.likeCount);
+  const viewCount = Number.isFinite(rawViewCount) ? Math.max(0, Math.floor(rawViewCount)) : 0;
+  const likeCount = Number.isFinite(rawLikeCount) ? Math.max(0, Math.floor(rawLikeCount)) : 0;
   const requestedPublishedAt = body.publishedAt
     ? new Date(String(body.publishedAt))
     : null;
@@ -201,6 +205,8 @@ async function buildPostPayload(body, ignoreId) {
     categoryId,
     tags: Array.isArray(body.tags) ? body.tags : [],
     status: body.status === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+    viewCount,
+    likeCount,
     publishedAt,
     generateAiComment: body.generateAiComment === true,
     slug: await buildUniqueSlug(title, ignoreId),
@@ -366,6 +372,8 @@ router.post("/", requireAdmin, async (req, res) => {
       contentHtml: payload.contentHtml,
       contentText: payload.contentText,
       categoryId: payload.categoryId,
+      viewCount: payload.viewCount,
+      likeCount: payload.likeCount,
       status: payload.status,
       publishedAt: isPublished ? payload.publishedAt || new Date() : null,
     },
@@ -409,6 +417,8 @@ router.put("/:id", requireAdmin, async (req, res) => {
       contentHtml: payload.contentHtml,
       contentText: payload.contentText,
       categoryId: payload.categoryId,
+      viewCount: payload.viewCount,
+      likeCount: payload.likeCount,
       status: payload.status,
       publishedAt: isPublished ? payload.publishedAt || existing.publishedAt || new Date() : null,
     },
