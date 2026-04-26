@@ -29,7 +29,7 @@ function getProfileInitials(name: string) {
 
 function splitWelcomeTags(value: string) {
   return value
-    .split(/[,，\n]/)
+    .split(/[,\n，、；;]/)
     .map((label) => label.trim())
     .filter(Boolean);
 }
@@ -47,7 +47,6 @@ export function HomePageContent({
   categories: _categories,
   settings,
   reaction,
-  guestbookCount,
 }: HomePageContentProps) {
   const [reactionState, setReactionState] = useState(reaction);
   const [bubbleTag, setBubbleTag] = useState("");
@@ -56,12 +55,19 @@ export function HomePageContent({
 
   const welcomeTags = splitWelcomeTags(settings.welcomeTags);
   const featuredPosts = useMemo(
-    () =>
-      posts.filter((post) => post.status === "PUBLISHED" && post.isFeatured),
+    () => posts.filter((post) => post.status === "PUBLISHED" && post.isFeatured),
     [posts]
   );
   const featuredPages = useMemo(() => chunkPosts(featuredPosts, 3), [featuredPosts]);
   const currentFeaturedPosts = featuredPages[featuredPage] || [];
+  const totalLikes = useMemo(
+    () => posts.reduce((sum, post) => sum + post.likeCount, 0),
+    [posts]
+  );
+  const totalViews = useMemo(
+    () => posts.reduce((sum, post) => sum + post.viewCount, 0),
+    [posts]
+  );
 
   const topTags = Object.entries(reactionState.tagCounts)
     .sort(([, a], [, b]) => b - a)
@@ -140,65 +146,79 @@ export function HomePageContent({
                 </p>
 
                 <div className="mt-6 grid w-full grid-cols-3 gap-3 rounded-[22px] bg-white/72 p-4 text-center">
-                  <Link href="/knowledge" className="rounded-[16px] px-2 py-1 transition hover:bg-white/70">
+                  <Link
+                    href="/knowledge"
+                    className="rounded-[16px] px-2 py-1 transition hover:bg-white/70"
+                  >
                     <p className="text-lg font-semibold text-[var(--color-ink)]">{posts.length}</p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">文章</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
+                      文章
+                    </p>
+                    <span className="mx-auto mt-1 block h-px w-8 rounded-full bg-[var(--color-accent)]/60" />
                   </Link>
                   <div className="rounded-[16px] px-2 py-1">
-                    <p className="text-lg font-semibold text-[var(--color-ink)]">{reactionState.total}</p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">点赞</p>
+                    <p className="text-lg font-semibold text-[var(--color-ink)]">{totalLikes}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
+                      点赞
+                    </p>
                   </div>
-                  <Link href="/guestbook" className="rounded-[16px] px-2 py-1 transition hover:bg-white/70">
-                    <p className="text-lg font-semibold text-[var(--color-ink)]">{guestbookCount}</p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">留言</p>
-                  </Link>
+                  <div className="rounded-[16px] px-2 py-1">
+                    <p className="text-lg font-semibold text-[var(--color-ink)]">{totalViews}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-text-faint)]">
+                      阅读
+                    </p>
+                  </div>
                 </div>
               </div>
             </SurfaceCard>
 
-            <SurfaceCard>
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">点赞</p>
-              <div className="mt-4 rounded-[24px] bg-white/74 p-5 text-center">
-                <p className="font-serif text-5xl text-[var(--color-ink)]">{reactionState.total}</p>
-                <p className="mt-2 text-sm text-[var(--color-text-faint)]">主包收到的认可</p>
-              </div>
-              <div className="mt-5 space-y-4">
-                {topTags.map(([tag, count], index) => {
-                  const progress = Math.max(12, Math.round((count / maxTagCount) * 100));
-                  const color = pastelChips[index % pastelChips.length];
+            {welcomeTags.length > 0 && (
+              <SurfaceCard>
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">点赞</p>
+                <div className="mt-4 rounded-[24px] bg-white/74 p-5 text-center">
+                  <p className="font-serif text-5xl text-[var(--color-ink)]">{reactionState.total}</p>
+                  <p className="mt-2 text-sm text-[var(--color-text-faint)]">
+                    主包收到的认可
+                  </p>
+                </div>
+                <div className="mt-5 space-y-4">
+                  {topTags.map(([tag, count], index) => {
+                    const progress = Math.max(12, Math.round((count / maxTagCount) * 100));
+                    const color = pastelChips[index % pastelChips.length];
 
-                  return (
-                    <div key={tag} className="space-y-2">
-                      <div className="flex items-center justify-between gap-3 text-sm text-[var(--color-text)]">
-                        <span className="font-medium text-[var(--color-ink)]">{tag}</span>
-                        <span className="text-[var(--color-text-faint)]">{count}</span>
-                      </div>
-                      <div
-                        className="race-track"
-                        style={
-                          {
-                            "--race-progress": `${progress}%`,
-                            "--race-color": color,
-                          } as React.CSSProperties
-                        }
-                      >
-                        <div className="race-track-fill" />
-                        <div className="race-car" aria-hidden="true">
-                          <span className="race-car-body" />
-                          <span className="race-car-wheel race-car-wheel-left" />
-                          <span className="race-car-wheel race-car-wheel-right" />
+                    return (
+                      <div key={tag} className="space-y-2">
+                        <div className="flex items-center justify-between gap-3 text-sm text-[var(--color-text)]">
+                          <span className="font-medium text-[var(--color-ink)]">{tag}</span>
+                          <span className="text-[var(--color-text-faint)]">{count}</span>
+                        </div>
+                        <div
+                          className="race-track"
+                          style={
+                            {
+                              "--race-progress": `${progress}%`,
+                              "--race-color": color,
+                            } as React.CSSProperties
+                          }
+                        >
+                          <div className="race-track-fill" />
+                          <div className="race-car" aria-hidden="true">
+                            <span className="race-car-body" />
+                            <span className="race-car-wheel race-car-wheel-left" />
+                            <span className="race-car-wheel race-car-wheel-right" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-                {topTags.length === 0 && (
-                  <p className="rounded-[16px] border border-[var(--color-line)] bg-white/80 px-4 py-3 text-sm text-[var(--color-text-faint)]">
-                    点击右侧标签，为主包点个赞。
-                  </p>
-                )}
-              </div>
-            </SurfaceCard>
+                    );
+                  })}
+                  {topTags.length === 0 && (
+                    <p className="rounded-[16px] border border-[var(--color-line)] bg-white/80 px-4 py-3 text-sm text-[var(--color-text-faint)]">
+                      点击右侧标签，为主包点个赞。
+                    </p>
+                  )}
+                </div>
+              </SurfaceCard>
+            )}
           </aside>
 
           <div className="space-y-6">
@@ -253,25 +273,47 @@ export function HomePageContent({
                   </div>
                   <div className="flex items-center gap-3">
                     {featuredPages.length > 1 && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <button
                           type="button"
                           onClick={goPrevFeatured}
-                          className="rounded-full border border-[var(--color-line)] bg-white px-3 py-2 text-sm text-[var(--color-ink)]"
+                          className="featured-nav-button"
                           aria-label="上一组置顶文章"
                         >
-                          ←
+                          <svg
+                            viewBox="0 0 20 20"
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M12.5 4.5L7 10l5.5 5.5" />
+                          </svg>
                         </button>
-                        <span className="text-xs text-[var(--color-text-faint)]">
+                        <span className="min-w-[46px] text-center text-xs font-medium tracking-[0.2em] text-[var(--color-text-faint)]">
                           {featuredPage + 1} / {featuredPages.length}
                         </span>
                         <button
                           type="button"
                           onClick={goNextFeatured}
-                          className="rounded-full border border-[var(--color-line)] bg-white px-3 py-2 text-sm text-[var(--color-ink)]"
+                          className="featured-nav-button"
                           aria-label="下一组置顶文章"
                         >
-                          →
+                          <svg
+                            viewBox="0 0 20 20"
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M7.5 4.5L13 10l-5.5 5.5" />
+                          </svg>
                         </button>
                       </div>
                     )}

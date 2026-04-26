@@ -50,12 +50,7 @@ export default function KnowledgePage() {
           activeCategory === "all" || post.category.slug === activeCategory;
         const matchesKeyword =
           !normalizedKeyword ||
-          [
-            post.title,
-            post.excerpt,
-            post.category.name,
-            ...post.tags.map((tag) => tag.name),
-          ]
+          [post.title, post.excerpt, post.category.name, ...post.tags.map((tag) => tag.name)]
             .join(" ")
             .toLowerCase()
             .includes(normalizedKeyword);
@@ -217,9 +212,11 @@ export default function KnowledgePage() {
                 >
                   <div className="relative overflow-hidden">
                     {post.isFeatured && (
-                      <span className="absolute left-3 top-3 z-10 rounded-full bg-[rgba(32,50,60,0.84)] px-3 py-1 text-xs font-semibold tracking-[0.08em] text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)]">
-                        主播推荐
-                      </span>
+                      <div className="featured-stamp">
+                        <span className="featured-stamp__ring">
+                          <span className="featured-stamp__text">主播推荐</span>
+                        </span>
+                      </div>
                     )}
                     <div
                       className={`h-44 w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03] ${
