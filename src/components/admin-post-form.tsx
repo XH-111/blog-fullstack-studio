@@ -68,6 +68,7 @@ function buildPlainTextFromMarkdown(markdown: string) {
 export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) {
   const router = useRouter();
   const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const markdownImageInputRef = useRef<HTMLInputElement | null>(null);
   const markdownRenderer = useMemo(
     () =>
       new MarkdownIt({
@@ -201,6 +202,71 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
     reader.onload = () => {
       if (typeof reader.result === "string") {
         setCoverImage(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  }
+
+  function insertMarkdownAtCursor(insertion: string) {
+    const textarea = document.getElementById("markdown-editor") as HTMLTextAreaElement | null;
+    if (!textarea) {
+      setMarkdownContent((current) => `${current}\n\n${insertion}`.trim());
+      return;
+    }
+
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? textarea.value.length;
+    const before = markdownContent.slice(0, start);
+    const after = markdownContent.slice(end);
+    const needsLeadingBreak = before.length > 0 && !before.endsWith("\n");
+    const needsTrailingBreak = after.length > 0 && !after.startsWith("\n");
+    const nextValue =
+      before +
+      (needsLeadingBreak ? "\n\n" : "") +
+      insertion +
+      (needsTrailingBreak ? "\n\n" : "") +
+      after;
+
+    setMarkdownContent(nextValue);
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const cursor = before.length + (needsLeadingBreak ? 2 : 0) + insertion.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  function handleMarkdownImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setMessage("正在上传图片...");
+    const reader = new FileReader();
+    reader.onload = async () => {
+      if (typeof reader.result !== "string") {
+        setMessage("图片读取失败");
+        return;
+      }
+
+      try {
+        const result = await apiFetch<{ url: string }>("/api/uploads/image", {
+          method: "POST",
+          token,
+          body: JSON.stringify({
+            fileName: file.name,
+            contentType: file.type,
+            dataUrl: reader.result,
+          }),
+        });
+
+        const alt = file.name.replace(/\.[^.]+$/, "") || "文章配图";
+        insertMarkdownAtCursor(`![${alt}](${result.url})`);
+        setMessage("图片已插入");
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "图片上传失败");
       }
     };
     reader.readAsDataURL(file);
@@ -400,8 +466,28 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
               ) : (
                 <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_260px]">
                   <div className="bg-[#dfe3e8] p-4 md:p-8">
+                    <input
+                      ref={markdownImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="pointer-events-none absolute -left-[9999px] h-px w-px opacity-0"
+                      onChange={handleMarkdownImageChange}
+                    />
+                    <div className="mx-auto mb-4 flex max-w-[860px] items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => markdownImageInputRef.current?.click()}
+                        className="rounded-[6px] bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        插入图片
+                      </button>
+                      <p className="text-xs text-[var(--color-text-faint)]">
+                        选择本地图片后，会上传到站点目录，再插入 Markdown 图片语法。
+                      </p>
+                    </div>
                     <div className="mx-auto max-w-[860px] overflow-hidden bg-white shadow-[0_8px_30px_rgba(15,23,42,0.18)]">
                       <textarea
+                        id="markdown-editor"
                         value={markdownContent}
                         onChange={(event) => setMarkdownContent(event.target.value)}
                         placeholder={[
