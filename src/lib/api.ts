@@ -1,6 +1,33 @@
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:4000";
 
+export function resolveUploadUrl(url?: string | null) {
+  if (!url) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(url) || url.startsWith("data:")) {
+    return url;
+  }
+
+  if (url.startsWith("/uploads/")) {
+    return `${API_BASE}${url}`;
+  }
+
+  return url;
+}
+
+export function normalizeRenderedHtml(html?: string | null) {
+  if (!html) {
+    return "";
+  }
+
+  return html.replace(
+    /(<img\b[^>]*\bsrc=["'])(\/uploads\/[^"']+)(["'][^>]*>)/gi,
+    (_match, prefix, src, suffix) => `${prefix}${resolveUploadUrl(src)}${suffix}`
+  );
+}
+
 type RequestOptions = RequestInit & {
   token?: string | null;
 };

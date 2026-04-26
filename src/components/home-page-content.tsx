@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   apiFetch,
@@ -34,6 +34,14 @@ function splitWelcomeTags(value: string) {
     .filter(Boolean);
 }
 
+function chunkPosts(posts: PostRecord[], size: number) {
+  const pages: PostRecord[][] = [];
+  for (let index = 0; index < posts.length; index += size) {
+    pages.push(posts.slice(index, index + size));
+  }
+  return pages;
+}
+
 export function HomePageContent({
   posts,
   categories: _categories,
@@ -44,10 +52,17 @@ export function HomePageContent({
   const [reactionState, setReactionState] = useState(reaction);
   const [bubbleTag, setBubbleTag] = useState("");
   const [isReacting, setIsReacting] = useState(false);
+  const [featuredPage, setFeaturedPage] = useState(0);
+
   const welcomeTags = splitWelcomeTags(settings.welcomeTags);
-  const featuredPosts = posts
-    .filter((post) => post.status === "PUBLISHED" && post.isFeatured)
-    .slice(0, 3);
+  const featuredPosts = useMemo(
+    () =>
+      posts.filter((post) => post.status === "PUBLISHED" && post.isFeatured),
+    [posts]
+  );
+  const featuredPages = useMemo(() => chunkPosts(featuredPosts, 3), [featuredPosts]);
+  const currentFeaturedPosts = featuredPages[featuredPage] || [];
+
   const topTags = Object.entries(reactionState.tagCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 4);
@@ -73,6 +88,18 @@ export function HomePageContent({
         setBubbleTag((current) => (current === tag ? "" : current));
       }, 1800);
     }
+  }
+
+  function goPrevFeatured() {
+    setFeaturedPage((current) =>
+      current === 0 ? Math.max(featuredPages.length - 1, 0) : current - 1
+    );
+  }
+
+  function goNextFeatured() {
+    setFeaturedPage((current) =>
+      current >= featuredPages.length - 1 ? 0 : current + 1
+    );
   }
 
   return (
@@ -224,23 +251,48 @@ export function HomePageContent({
                       {settings.featuredDescription}
                     </p>
                   </div>
-                  <Link
-                    href="/knowledge"
-                    className="rounded-full bg-[var(--color-accent)]/10 px-4 py-2 text-sm text-[var(--color-accent)]"
-                  >
-                    进入知识库
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    {featuredPages.length > 1 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={goPrevFeatured}
+                          className="rounded-full border border-[var(--color-line)] bg-white px-3 py-2 text-sm text-[var(--color-ink)]"
+                          aria-label="上一组置顶文章"
+                        >
+                          ←
+                        </button>
+                        <span className="text-xs text-[var(--color-text-faint)]">
+                          {featuredPage + 1} / {featuredPages.length}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={goNextFeatured}
+                          className="rounded-full border border-[var(--color-line)] bg-white px-3 py-2 text-sm text-[var(--color-ink)]"
+                          aria-label="下一组置顶文章"
+                        >
+                          →
+                        </button>
+                      </div>
+                    )}
+                    <Link
+                      href="/knowledge"
+                      className="rounded-full bg-[var(--color-accent)]/10 px-4 py-2 text-sm text-[var(--color-accent)]"
+                    >
+                      进入知识库
+                    </Link>
+                  </div>
                 </div>
 
                 <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                  {featuredPosts.map((post, index) => (
+                  {currentFeaturedPosts.map((post, index) => (
                     <Link
                       key={post.id}
                       href={`/posts/${post.slug}`}
                       className="group overflow-hidden rounded-[24px] border border-[var(--color-line)] bg-white/92 shadow-[var(--shadow-card)] transition-transform duration-300 hover:-translate-y-1.5"
                     >
                       <div
-                        className="h-44 w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03]"
+                        className="featured-cover featured-cover-home h-44 w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03]"
                         style={{
                           backgroundImage: `url(${resolveCoverImage(post.coverImage)})`,
                         }}

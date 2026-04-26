@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { apiFetch, PostRecord } from "@/lib/api";
+import { apiFetch, normalizeRenderedHtml, PostRecord } from "@/lib/api";
 import { resolveCoverImage } from "@/lib/cover-image";
 import { CommentForm } from "@/components/comment-form";
 
@@ -91,6 +91,8 @@ export default function PostDetailPage() {
     );
   }
 
+  const contentHtml = normalizeRenderedHtml(post.contentHtml);
+
   return (
     <main className="min-h-screen bg-[linear-gradient(135deg,#f7e7ef_0%,#e9f4f5_45%,#fbf2e6_100%)] pb-20">
       <section
@@ -154,7 +156,7 @@ export default function PostDetailPage() {
         <article className="rounded-[30px] border border-white/70 bg-white/82 p-6 shadow-[0_22px_90px_rgba(67,48,82,0.12)] backdrop-blur-xl md:p-10">
           <div
             className="rich-post-content prose prose-slate max-w-none prose-headings:font-serif prose-headings:text-[var(--color-ink)] prose-p:leading-8 prose-a:text-[var(--color-accent)] prose-ol:list-decimal prose-ol:pl-7 prose-li:pl-1 prose-li:my-1 prose-img:mx-auto prose-img:my-8 prose-img:h-auto prose-img:max-w-full prose-img:rounded-[22px] prose-blockquote:rounded-[20px] prose-blockquote:border-l-[6px] prose-blockquote:bg-[var(--color-panel-soft)] prose-blockquote:px-5 prose-blockquote:py-2 prose-pre:rounded-[22px] prose-pre:bg-[#0f172a] prose-pre:px-5 prose-pre:py-4 prose-pre:text-slate-100 prose-pre:shadow-none prose-code:rounded prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-[0.92em] prose-code:text-slate-800 prose-code:before:content-none prose-code:after:content-none"
-            dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+            dangerouslySetInnerHTML={{ __html: contentHtml }}
           />
         </article>
 

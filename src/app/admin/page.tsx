@@ -29,11 +29,10 @@ export default function AdminDashboardPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [guestbookSearch, setGuestbookSearch] = useState("");
+  const [postSearch, setPostSearch] = useState("");
   const [token] = useState(
     () =>
-      (typeof window !== "undefined" &&
-        localStorage.getItem("blog_admin_token")) ||
-      ""
+      (typeof window !== "undefined" && localStorage.getItem("blog_admin_token")) || ""
   );
 
   async function loadGuestbookMessages(currentToken = token) {
@@ -41,9 +40,7 @@ export default function AdminDashboardPage() {
       token: currentToken,
     });
     setGuestbookMessages(list);
-    setReplyDrafts(
-      Object.fromEntries(list.map((item) => [item.id, item.replyContent || ""]))
-    );
+    setReplyDrafts(Object.fromEntries(list.map((item) => [item.id, item.replyContent || ""])));
   }
 
   useEffect(() => {
@@ -61,12 +58,40 @@ export default function AdminDashboardPage() {
         setPosts(postList);
         setSummary(summaryData);
         setGuestbookMessages(guestbookList);
-        setReplyDrafts(
-          Object.fromEntries(guestbookList.map((item) => [item.id, item.replyContent || ""]))
-        );
+        setReplyDrafts(Object.fromEntries(guestbookList.map((item) => [item.id, item.replyContent || ""])));
       })
       .catch(() => router.push("/admin/login"));
   }, [router, token]);
+
+  const filteredPosts = useMemo(() => {
+    const keyword = postSearch.trim().toLowerCase();
+    const matchedPosts = !keyword
+      ? posts
+      : posts.filter((post) =>
+          [
+            post.title,
+            post.excerpt,
+            post.contentText || "",
+            post.contentMarkdown || "",
+            post.category.name,
+            post.status === "PUBLISHED" ? "已发布" : "草稿",
+            post.isFeatured ? "置顶 featured" : "",
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(keyword)
+        );
+
+    return [...matchedPosts].sort((a, b) => {
+      if (a.isFeatured !== b.isFeatured) {
+        return a.isFeatured ? -1 : 1;
+      }
+
+      const aTime = Date.parse(a.publishedAt || a.updatedAt || a.createdAt);
+      const bTime = Date.parse(b.publishedAt || b.updatedAt || b.createdAt);
+      return bTime - aTime;
+    });
+  }, [postSearch, posts]);
 
   const filteredGuestbookMessages = useMemo(() => {
     const keyword = guestbookSearch.trim().toLowerCase();
@@ -92,8 +117,7 @@ export default function AdminDashboardPage() {
       return;
     }
 
-    const confirmed = window.confirm(`确认删除「${post.title}」？删除后不可恢复。`);
-    if (!confirmed) {
+    if (!window.confirm(`确认删除《${post.title}》吗？删除后不可恢复。`)) {
       return;
     }
 
@@ -124,7 +148,7 @@ export default function AdminDashboardPage() {
     }
 
     if (post.status !== "PUBLISHED" && !post.isFeatured) {
-      setMessage("只有已发布文章可以置顶到首页");
+      setMessage("只有已发布文章才能置顶到首页。");
       return;
     }
 
@@ -135,7 +159,7 @@ export default function AdminDashboardPage() {
     });
 
     setPosts((current) => current.map((item) => (item.id === post.id ? updated : item)));
-    setMessage(updated.isFeatured ? "文章已置顶到首页" : "已取消首页置顶");
+    setMessage(updated.isFeatured ? "文章已置顶到首页。" : "已取消文章置顶。");
   }
 
   async function handleReply(messageId: number) {
@@ -145,7 +169,7 @@ export default function AdminDashboardPage() {
 
     const replyContent = (replyDrafts[messageId] || "").trim();
     if (replyContent.length > maxReplyLength) {
-      setMessage(`回复最多 ${maxReplyLength} 字`);
+      setMessage(`回复最多 ${maxReplyLength} 字。`);
       return;
     }
 
@@ -154,7 +178,7 @@ export default function AdminDashboardPage() {
       token,
       body: JSON.stringify({ replyContent }),
     });
-    setMessage(replyContent ? "留言回复已保存" : "留言回复已清空");
+    setMessage(replyContent ? "留言回复已保存。" : "留言回复已清空。");
     await loadGuestbookMessages();
   }
 
@@ -162,7 +186,7 @@ export default function AdminDashboardPage() {
     event.preventDefault();
 
     if (newPassword !== confirmPassword) {
-      setMessage("两次输入的新密码不一致");
+      setMessage("两次输入的新密码不一致。");
       return;
     }
 
@@ -176,7 +200,7 @@ export default function AdminDashboardPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setMessage("密码已更新，下次登录请使用新密码");
+      setMessage("密码已更新，下次登录请使用新密码。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "修改密码失败");
     }
@@ -228,9 +252,7 @@ export default function AdminDashboardPage() {
         >
           <div>
             <h2 className="font-serif text-3xl text-[var(--color-ink)]">账号安全</h2>
-            <p className="mt-1 text-sm text-[var(--color-text-faint)]">
-              修改当前管理员登录密码。
-            </p>
+            <p className="mt-1 text-sm text-[var(--color-text-faint)]">修改当前管理员登录密码。</p>
           </div>
           <span className="rounded-full border border-[var(--color-line)] bg-white px-4 py-2 text-sm text-[var(--color-text)]">
             {isPasswordOpen ? "收起" : "更改密码"}
@@ -288,7 +310,7 @@ export default function AdminDashboardPage() {
           <div>
             <h2 className="font-serif text-3xl text-[var(--color-ink)]">文章管理</h2>
             <p className="mt-1 text-sm text-[var(--color-text-faint)]">
-              共 {posts.length} 篇文章，已置顶 {posts.filter((post) => post.isFeatured).length} 篇
+              共 {posts.length} 篇文章，已置顶 {posts.filter((post) => post.isFeatured).length} 篇。
             </p>
           </div>
           <span className="rounded-full border border-[var(--color-line)] bg-white px-4 py-2 text-sm text-[var(--color-text)]">
@@ -298,9 +320,19 @@ export default function AdminDashboardPage() {
 
         {isPostsOpen && (
           <div className="mt-5 grid gap-5">
-            {message && <p className="text-sm text-[var(--color-text-faint)]">{message}</p>}
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <input
+                value={postSearch}
+                onChange={(event) => setPostSearch(event.target.value)}
+                placeholder="搜索标题、摘要、正文、分类、状态或置顶文章"
+                className="w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 text-sm outline-none md:max-w-md"
+              />
+              <span className="text-sm text-[var(--color-text-faint)]">
+                {message || `当前显示 ${filteredPosts.length} 篇`}
+              </span>
+            </div>
 
-            {posts.map((post) => {
+            {filteredPosts.map((post) => {
               const isPublished = post.status === "PUBLISHED";
 
               return (
@@ -316,7 +348,7 @@ export default function AdminDashboardPage() {
                         <span>{post.commentCount} 条评论</span>
                         {post.isFeatured && (
                           <span className="rounded-full bg-[var(--color-accent)]/10 px-2 py-0.5 text-[var(--color-accent)]">
-                            首页置顶
+                            已置顶
                           </span>
                         )}
                       </div>
@@ -364,8 +396,8 @@ export default function AdminDashboardPage() {
               );
             })}
 
-            {posts.length === 0 && (
-              <p className="text-sm text-[var(--color-text)]">还没有文章。</p>
+            {filteredPosts.length === 0 && (
+              <p className="text-sm text-[var(--color-text)]">没有匹配的文章。</p>
             )}
           </div>
         )}
@@ -380,7 +412,7 @@ export default function AdminDashboardPage() {
           <div>
             <h2 className="font-serif text-3xl text-[var(--color-ink)]">留言板管理</h2>
             <p className="mt-1 text-sm text-[var(--color-text-faint)]">
-              共 {guestbookMessages.length} 条留言，包含公开留言和私密留言
+              共 {guestbookMessages.length} 条留言，包含公开留言和私密留言。
             </p>
           </div>
           <span className="rounded-full border border-[var(--color-line)] bg-white px-4 py-2 text-sm text-[var(--color-text)]">
@@ -415,11 +447,12 @@ export default function AdminDashboardPage() {
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
                         <h3 className="font-serif text-2xl text-[var(--color-ink)]">{item.authorName}</h3>
-                        <span className={`rounded-full px-3 py-1 text-xs ${
-                          item.isPrivate
-                            ? "bg-[#f6d6de] text-[#9c4053]"
-                            : "bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
-                        }`}
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs ${
+                            item.isPrivate
+                              ? "bg-[#f6d6de] text-[#9c4053]"
+                              : "bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
+                          }`}
                         >
                           {item.isPrivate ? "私密留言" : "公开留言"}
                         </span>
@@ -449,7 +482,11 @@ export default function AdminDashboardPage() {
                         className="min-h-[120px] w-full rounded-[18px] border border-[var(--color-line)] bg-white/92 px-4 py-3 text-sm outline-none"
                       />
                       <div className="flex items-center justify-between gap-3">
-                        <span className={remaining < 10 ? "text-xs text-[#b44a5a]" : "text-xs text-[var(--color-text-faint)]"}>
+                        <span
+                          className={
+                            remaining < 10 ? "text-xs text-[#b44a5a]" : "text-xs text-[var(--color-text-faint)]"
+                          }
+                        >
                           还可输入 {remaining} 字
                         </span>
                         <button

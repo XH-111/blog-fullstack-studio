@@ -164,6 +164,58 @@ select {
   line-height: 1.8;
 }
 
+.rich-post-content pre code.hljs {
+  background: transparent;
+  color: #e2e8f0;
+}
+
+.rich-post-content .hljs-keyword,
+.rich-post-content .hljs-selector-tag,
+.rich-post-content .hljs-literal,
+.rich-post-content .hljs-section,
+.rich-post-content .hljs-link {
+  color: #c792ea;
+}
+
+.rich-post-content .hljs-type,
+.rich-post-content .hljs-title,
+.rich-post-content .hljs-title.class_,
+.rich-post-content .hljs-title.class_.inherited__,
+.rich-post-content .hljs-params {
+  color: #82aaff;
+}
+
+.rich-post-content .hljs-string,
+.rich-post-content .hljs-attr,
+.rich-post-content .hljs-symbol,
+.rich-post-content .hljs-bullet,
+.rich-post-content .hljs-addition {
+  color: #c3e88d;
+}
+
+.rich-post-content .hljs-number,
+.rich-post-content .hljs-built_in,
+.rich-post-content .hljs-variable,
+.rich-post-content .hljs-template-variable {
+  color: #f78c6c;
+}
+
+.rich-post-content .hljs-comment,
+.rich-post-content .hljs-quote,
+.rich-post-content .hljs-deletion {
+  color: #7f8c98;
+}
+
+.rich-post-content .hljs-meta,
+.rich-post-content .hljs-doctag {
+  color: #89ddff;
+}
+
+.rich-post-content .hljs-function,
+.rich-post-content .hljs-title.function_ {
+  color: #82aaff;
+}
+
 .rich-post-content code {
   border-radius: 6px;
   background: rgba(148, 163, 184, 0.15);
@@ -178,6 +230,37 @@ select {
   max-width: 100%;
   margin-left: auto;
   margin-right: auto;
+}
+
+.featured-cover {
+  position: relative;
+  isolation: isolate;
+}
+
+.featured-cover::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    linear-gradient(
+      118deg,
+      rgba(255, 255, 255, 0) 18%,
+      rgba(255, 255, 255, 0.12) 34%,
+      rgba(255, 255, 255, 0.48) 46%,
+      rgba(255, 255, 255, 0.08) 58%,
+      rgba(255, 255, 255, 0) 72%
+    );
+  opacity: 0.75;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.featured-cover-home::after {
+  animation: featured-sheen-home 5.4s ease-in-out infinite;
+}
+
+.featured-cover-library::after {
+  animation: featured-sheen-library 6.2s ease-in-out infinite;
 }
 
 .race-track {
@@ -304,5 +387,29 @@ select {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes featured-sheen-home {
+  0%,
+  100% {
+    transform: translateX(-52%) skewX(-16deg);
+    opacity: 0.48;
+  }
+  50% {
+    transform: translateX(52%) skewX(-16deg);
+    opacity: 0.82;
+  }
+}
+
+@keyframes featured-sheen-library {
+  0%,
+  100% {
+    transform: translateX(-58%) skewX(-18deg);
+    opacity: 0.42;
+  }
+  50% {
+    transform: translateX(58%) skewX(-18deg);
+    opacity: 0.78;
   }
 }

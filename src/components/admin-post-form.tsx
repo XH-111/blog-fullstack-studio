@@ -3,9 +3,16 @@
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { JSONContent } from "@tiptap/react";
+import hljs from "highlight.js";
 import MarkdownIt from "markdown-it";
 import { useRouter } from "next/navigation";
-import { apiFetch, CategoryRecord, PostRecord, TagRecord } from "@/lib/api";
+import {
+  apiFetch,
+  CategoryRecord,
+  normalizeRenderedHtml,
+  PostRecord,
+  TagRecord,
+} from "@/lib/api";
 import { defaultCoverImage, getEditableCoverImage } from "@/lib/cover-image";
 import { RichTextEditor } from "@/components/rich-text-editor";
 
@@ -49,14 +56,14 @@ function parseNonNegativeInteger(value: string) {
 function buildPlainTextFromMarkdown(markdown: string) {
   return markdown
     .replace(/```[\s\S]*?```/g, (block) =>
-      block
-        .replace(/^```[^\n]*\n?/, "")
-        .replace(/\n?```$/, "")
-        .trim()
+      block.replace(/^```[^\n]*\n?/, "").replace(/\n?```$/, "").trim()
     )
     .replace(/`([^`]+)`/g, "$1")
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .replace(/<img[^>]*alt="([^"]*)"[^>]*>/gi, "$1")
+    .replace(/<img[^>]*alt='([^']*)'[^>]*>/gi, "$1")
+    .replace(/<img[^>]*>/gi, "")
     .replace(/^>\s?/gm, "")
     .replace(/^#{1,6}\s*/gm, "")
     .replace(/^[-*+]\s+/gm, "")
@@ -75,11 +82,23 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
         html: true,
         linkify: true,
         breaks: true,
+        highlight(code, language) {
+          const normalizedLanguage = String(language || "").trim().toLowerCase();
+
+          if (normalizedLanguage && hljs.getLanguage(normalizedLanguage)) {
+            const highlighted = hljs.highlight(code, {
+              language: normalizedLanguage,
+              ignoreIllegals: true,
+            }).value;
+            return `<pre><code class="hljs language-${normalizedLanguage}">${highlighted}</code></pre>`;
+          }
+
+          const highlighted = hljs.highlightAuto(code).value;
+          return `<pre><code class="hljs">${highlighted}</code></pre>`;
+        },
       }),
     []
   );
-
-  const initialEditorMode: EditorMode = initialPost?.contentJson ? "rich" : "markdown";
 
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [tags, setTags] = useState<TagRecord[]>([]);
@@ -94,7 +113,9 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
   const [markdownContent, setMarkdownContent] = useState(
     initialPost?.contentMarkdown || initialPost?.contentText || ""
   );
-  const [editorMode, setEditorMode] = useState<EditorMode>(initialEditorMode);
+  const [editorMode, setEditorMode] = useState<EditorMode>(
+    initialPost?.contentJson ? "rich" : "markdown"
+  );
   const [richSeedJson, setRichSeedJson] = useState<string | null>(initialPost?.contentJson || null);
   const [richSeedHtml, setRichSeedHtml] = useState(initialPost?.contentHtml || "");
   const [richEditorVersion, setRichEditorVersion] = useState(0);
@@ -107,9 +128,18 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
   );
   const [tagSelectId, setTagSelectId] = useState("");
   const [newTagName, setNewTagName] = useState("");
-  const [generateAiComment, setGenerateAiComment] = useState(Boolean(initialPost?.aiOfficialComment));
+  const [generateAiComment, setGenerateAiComment] = useState(
+    Boolean(initialPost?.aiOfficialComment)
+  );
   const [message, setMessage] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
+
+  const isPublished = initialPost?.status === "PUBLISHED";
+  const selectedTagRecord = tags.find((tag) => String(tag.id) === tagSelectId);
+  const markdownPreviewHtml = useMemo(
+    () => normalizeRenderedHtml(markdownRenderer.render(markdownContent || "")),
+    [markdownContent, markdownRenderer]
+  );
 
   async function loadMeta() {
     const [categoryList, tagList] = await Promise.all([
@@ -154,9 +184,6 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
     };
   }, [initialPost?.category.id]);
 
-  const isPublished = initialPost?.status === "PUBLISHED";
-  const selectedTagRecord = tags.find((tag) => String(tag.id) === tagSelectId);
-
   const handleEditorChange = useCallback(
     (value: { json: JSONContent | null; html: string; text: string }) => {
       setContentJson(value.json ? JSON.stringify(value.json) : null);
@@ -175,21 +202,22 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
       if (!markdownContent.trim()) {
         setMarkdownContent(contentText.trim());
       }
-      setEditorMode(nextMode);
+      setEditorMode("markdown");
       return;
     }
 
     const sourceMarkdown = markdownContent.trim();
     if (sourceMarkdown) {
+      const rendered = markdownRenderer.render(sourceMarkdown);
       setRichSeedJson(null);
-      setRichSeedHtml(markdownRenderer.render(sourceMarkdown));
+      setRichSeedHtml(rendered);
       setContentJson(null);
-      setContentHtml(markdownRenderer.render(sourceMarkdown));
+      setContentHtml(rendered);
       setContentText(buildPlainTextFromMarkdown(sourceMarkdown));
       setRichEditorVersion((current) => current + 1);
     }
 
-    setEditorMode(nextMode);
+    setEditorMode("rich");
   }
 
   function handleCoverChange(event: ChangeEvent<HTMLInputElement>) {
@@ -234,6 +262,75 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
       textarea.focus();
       const cursor = before.length + (needsLeadingBreak ? 2 : 0) + insertion.length;
       textarea.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  function handleMarkdownKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    event.preventDefault();
+
+    const textarea = event.currentTarget;
+    const value = markdownContent;
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+    const selectedText = value.slice(start, end);
+    const hasMultipleLines = selectedText.includes("\n");
+    const indent = "  ";
+
+    if (hasMultipleLines) {
+      const blockEnd = end;
+      const block = value.slice(lineStart, blockEnd);
+      const lines = block.split("\n");
+      const adjustedLines = event.shiftKey
+        ? lines.map((line) =>
+            line.startsWith(indent)
+              ? line.slice(indent.length)
+              : line.startsWith(" ")
+                ? line.slice(1)
+                : line
+          )
+        : lines.map((line) => `${indent}${line}`);
+      const nextBlock = adjustedLines.join("\n");
+      const nextValue = value.slice(0, lineStart) + nextBlock + value.slice(blockEnd);
+      const selectionDelta = nextBlock.length - block.length;
+
+      setMarkdownContent(nextValue);
+      requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + (event.shiftKey ? -Math.min(indent.length, start - lineStart) : indent.length), end + selectionDelta);
+      });
+      return;
+    }
+
+    if (event.shiftKey) {
+      const beforeCursor = value.slice(0, start);
+      if (beforeCursor.endsWith(indent)) {
+        const nextValue = value.slice(0, start - indent.length) + value.slice(end);
+        setMarkdownContent(nextValue);
+        requestAnimationFrame(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start - indent.length, start - indent.length);
+        });
+      } else if (beforeCursor.endsWith(" ")) {
+        const nextValue = value.slice(0, start - 1) + value.slice(end);
+        setMarkdownContent(nextValue);
+        requestAnimationFrame(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start - 1, start - 1);
+        });
+      }
+      return;
+    }
+
+    const nextValue = value.slice(0, start) + indent + value.slice(end);
+    setMarkdownContent(nextValue);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + indent.length, start + indent.length);
     });
   }
 
@@ -426,23 +523,12 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                 required
               />
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d6d9de] bg-[#f8f9fb] px-5 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#d6d9de] bg-[#f8f9fb] px-5 py-3">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => switchEditorMode("rich")}
-                    className={`rounded-[6px] px-4 py-2 text-sm font-semibold transition ${
-                      editorMode === "rich"
-                        ? "bg-[var(--color-accent)] text-white"
-                        : "border border-[#cfd4dc] bg-white text-[var(--color-text)]"
-                    }`}
-                  >
-                    富文本
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => switchEditorMode("markdown")}
-                    className={`rounded-[6px] px-4 py-2 text-sm font-semibold transition ${
+                    className={`rounded-[8px] px-4 py-2 text-sm font-semibold transition ${
                       editorMode === "markdown"
                         ? "bg-[var(--color-accent)] text-white"
                         : "border border-[#cfd4dc] bg-white text-[var(--color-text)]"
@@ -450,10 +536,26 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                   >
                     Markdown
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => switchEditorMode("rich")}
+                    className={`rounded-[8px] px-3 py-2 text-xs font-medium transition ${
+                      editorMode === "rich"
+                        ? "border border-[#cfd4dc] bg-white text-[var(--color-ink)]"
+                        : "border border-transparent bg-transparent text-[var(--color-text-faint)] hover:border-[#d8dde3] hover:bg-white/75"
+                    }`}
+                  >
+                    旧版富文本
+                  </button>
                 </div>
-                <p className="text-xs text-[var(--color-text-faint)]">
-                  技术文章更适合 Markdown，可直接用 `#`、`##` 和 ```代码块```。
-                </p>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[var(--color-accent)]">
+                    Primary Mode
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+                    技术文章默认使用 Markdown，右侧会实时预览。
+                  </p>
+                </div>
               </div>
 
               {editorMode === "rich" ? (
@@ -464,7 +566,7 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                   onChange={handleEditorChange}
                 />
               ) : (
-                <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_260px]">
+                <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.82fr)]">
                   <div className="bg-[#dfe3e8] p-4 md:p-8">
                     <input
                       ref={markdownImageInputRef}
@@ -473,23 +575,27 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                       className="pointer-events-none absolute -left-[9999px] h-px w-px opacity-0"
                       onChange={handleMarkdownImageChange}
                     />
-                    <div className="mx-auto mb-4 flex max-w-[860px] items-center gap-3">
+                    <div className="mx-auto mb-4 flex max-w-[860px] items-center justify-between gap-3 rounded-[10px] border border-[#d6d9de] bg-white/70 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[var(--color-ink)]">Markdown 编辑区</p>
+                        <p className="mt-1 text-xs text-[var(--color-text-faint)]">
+                          图片会先上传，再插入标准 Markdown 图片语法。
+                        </p>
+                      </div>
                       <button
                         type="button"
                         onClick={() => markdownImageInputRef.current?.click()}
-                        className="rounded-[6px] bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white"
+                        className="rounded-[8px] bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white"
                       >
                         插入图片
                       </button>
-                      <p className="text-xs text-[var(--color-text-faint)]">
-                        选择本地图片后，会上传到站点目录，再插入 Markdown 图片语法。
-                      </p>
                     </div>
                     <div className="mx-auto max-w-[860px] overflow-hidden bg-white shadow-[0_8px_30px_rgba(15,23,42,0.18)]">
                       <textarea
                         id="markdown-editor"
                         value={markdownContent}
                         onChange={(event) => setMarkdownContent(event.target.value)}
+                        onKeyDown={handleMarkdownKeyDown}
                         placeholder={[
                           "# 标题",
                           "",
@@ -511,32 +617,17 @@ export function AdminPostForm({ token, mode, initialPost }: AdminPostFormProps) 
                     </div>
                   </div>
 
-                  <div className="border-t border-[#d6d9de] bg-[#f8f9fb] p-5 lg:border-l lg:border-t-0">
+                  <div className="border-t border-[#d6d9de] bg-[#f8f9fb] p-5 xl:border-l xl:border-t-0">
                     <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-accent)]">
-                      Markdown Tips
+                      Live Preview
                     </p>
-                    <div className="mt-4 space-y-4 text-sm leading-7 text-[var(--color-text)]">
-                      <div className="rounded-[8px] border border-[#d6d9de] bg-white px-4 py-3">
-                        <p className="font-semibold text-[var(--color-ink)]">标题</p>
-                        <p># 一级标题</p>
-                        <p>## 二级标题</p>
-                      </div>
-                      <div className="rounded-[8px] border border-[#d6d9de] bg-white px-4 py-3">
-                        <p className="font-semibold text-[var(--color-ink)]">强调</p>
-                        <p>`行内代码`</p>
-                        <p>**加粗**</p>
-                      </div>
-                      <div className="rounded-[8px] border border-[#d6d9de] bg-white px-4 py-3">
-                        <p className="font-semibold text-[var(--color-ink)]">代码块</p>
-                        <p>```java</p>
-                        <p>System.out.println("hello");</p>
-                        <p>```</p>
-                      </div>
-                      <div className="rounded-[8px] border border-[#d6d9de] bg-white px-4 py-3">
-                        <p className="font-semibold text-[var(--color-ink)]">列表 / 引用</p>
-                        <p>- 列表项</p>
-                        <p>&gt; 引用内容</p>
-                      </div>
+                    <div className="mt-4 rounded-[12px] border border-[#d6d9de] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
+                      <div
+                        className="rich-post-content min-h-[840px] text-sm"
+                        dangerouslySetInnerHTML={{
+                          __html: markdownPreviewHtml || "<p>开始输入后，这里会实时预览。</p>",
+                        }}
+                      />
                     </div>
                   </div>
                 </div>

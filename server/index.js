@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -24,6 +25,7 @@ app.use(helmet({ crossOriginResourcePolicy: false }));
 // ???? base64 ?? JSON ???????????????
 app.use(express.json({ limit: "80mb" }));
 app.use(morgan("dev"));
+app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
