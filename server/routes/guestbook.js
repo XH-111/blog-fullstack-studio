@@ -1,6 +1,7 @@
 const express = require("express");
 const { prisma } = require("../db");
 const { requireAdmin } = require("../utils/auth");
+const { createGuestbookNotification } = require("../services/notification-service");
 
 const router = express.Router();
 const maxMessageLength = 100;
@@ -57,6 +58,8 @@ router.post("/", async (req, res) => {
   const message = await prisma.guestbookMessage.create({
     data: payload,
   });
+
+  await createGuestbookNotification(message);
 
   res.json(toPublicMessage(message));
 });

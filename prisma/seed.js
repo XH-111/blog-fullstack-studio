@@ -17,13 +17,21 @@ function toSlug(value) {
 
 async function upsertCategory(name) {
   const slug = toSlug(name);
-  const existed = await prisma.category.findFirst({
-    where: { OR: [{ slug }, { name }] },
+  const existedByName = await prisma.category.findUnique({
+    where: { name },
   });
 
-  if (existed) {
+  if (existedByName) {
+    return existedByName;
+  }
+
+  const existedBySlug = await prisma.category.findUnique({
+    where: { slug },
+  });
+
+  if (existedBySlug) {
     return prisma.category.update({
-      where: { id: existed.id },
+      where: { id: existedBySlug.id },
       data: { name, slug },
     });
   }
@@ -33,13 +41,21 @@ async function upsertCategory(name) {
 
 async function upsertTag(name) {
   const slug = toSlug(name);
-  const existed = await prisma.tag.findFirst({
-    where: { OR: [{ slug }, { name }] },
+  const existedByName = await prisma.tag.findUnique({
+    where: { name },
   });
 
-  if (existed) {
+  if (existedByName) {
+    return existedByName;
+  }
+
+  const existedBySlug = await prisma.tag.findUnique({
+    where: { slug },
+  });
+
+  if (existedBySlug) {
     return prisma.tag.update({
-      where: { id: existed.id },
+      where: { id: existedBySlug.id },
       data: { name, slug },
     });
   }
@@ -84,8 +100,10 @@ async function syncPostTags(postId, tagNames) {
   await prisma.postTag.deleteMany({ where: { postId } });
 
   if (tags.length > 0) {
+    const uniqueTags = Array.from(new Map(tags.map((tag) => [tag.id, tag])).values());
+
     await prisma.postTag.createMany({
-      data: tags.map((tag) => ({ postId, tagId: tag.id })),
+      data: uniqueTags.map((tag) => ({ postId, tagId: tag.id })),
     });
   }
 }

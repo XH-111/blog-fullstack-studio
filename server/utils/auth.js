@@ -14,15 +14,14 @@ function signAdminToken(user) {
 }
 
 function requireAdmin(req, res, next) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  const token = extractBearerToken(req);
 
   if (!token) {
     return res.status(401).json({ message: "未登录或登录已过期" });
   }
 
   try {
-    const payload = jwt.verify(token, jwtSecret);
+    const payload = verifyAdminToken(token);
     req.admin = payload;
     next();
   } catch (error) {
@@ -30,4 +29,13 @@ function requireAdmin(req, res, next) {
   }
 }
 
-module.exports = { signAdminToken, requireAdmin };
+function extractBearerToken(req) {
+  const authHeader = req.headers.authorization || "";
+  return authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+}
+
+function verifyAdminToken(token) {
+  return jwt.verify(token, jwtSecret);
+}
+
+module.exports = { signAdminToken, requireAdmin, extractBearerToken, verifyAdminToken };

@@ -103,6 +103,7 @@ model Post {
   aiReview          AiReview?
   aiOfficialComment AiOfficialComment?
   aiInterview       AiInterview?
+  notifications     Notification[]
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 }
@@ -117,26 +118,57 @@ model PostTag {
 }
 
 model Comment {
-  id         Int      @id @default(autoincrement())
-  postId     Int
-  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorName String
-  email      String?
-  content    String
-  floor      Int
-  isAi       Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id            Int            @id @default(autoincrement())
+  postId        Int
+  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentId      Int?
+  parent        Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[]      @relation("CommentReplies")
+  authorName    String
+  email         String?
+  content       String
+  floor         Int
+  isAi          Boolean        @default(false)
+  isAdmin       Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  notifications Notification[]
 }
 
 model GuestbookMessage {
-  id           Int      @id @default(autoincrement())
-  authorName   String
-  content      String
-  isPrivate    Boolean  @default(false)
-  replyContent String?
-  repliedAt    DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             Int            @id @default(autoincrement())
+  authorName     String
+  content        String
+  isPrivate      Boolean        @default(false)
+  replyContent   String?
+  repliedAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  notifications  Notification[]
+}
+
+model Notification {
+  id                 Int               @id @default(autoincrement())
+  type               NotificationType
+  title              String
+  content            String
+  isRead             Boolean           @default(false)
+  postId             Int?
+  post               Post?             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId          Int?
+  comment            Comment?          @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  guestbookMessageId Int?
+  guestbookMessage   GuestbookMessage? @relation(fields: [guestbookMessageId], references: [id], onDelete: Cascade)
+  createdAt          DateTime          @default(now())
+}
+
+model DailyMetric {
+  id             Int      @id @default(autoincrement())
+  dateKey        String   @unique
+  viewIncrement  Int      @default(0)
+  likeIncrement  Int      @default(0)
+  postIncrement  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model AiReview {
@@ -176,4 +208,10 @@ model AiInterview {
 enum PostStatus {
   DRAFT
   PUBLISHED
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  GUESTBOOK
 }

@@ -8,6 +8,7 @@ import {
   AboutProfileRecord,
   SiteSettingsRecord,
 } from "@/lib/api";
+import { getStoredAdminToken } from "@/lib/admin-auth";
 import { SurfaceCard } from "@/components/surface-card";
 import { pastelChips } from "@/lib/theme";
 
@@ -66,12 +67,7 @@ function parseHonors(value: string): AboutHonorItem[] {
 
 export default function AdminSettingsPage() {
   const router = useRouter();
-  const [token] = useState(
-    () =>
-      (typeof window !== "undefined" &&
-        localStorage.getItem("blog_admin_token")) ||
-      ""
-  );
+  const [token] = useState(() => getStoredAdminToken());
   const [form, setForm] = useState<SiteSettingsRecord>(emptySettings);
   const [aboutForm, setAboutForm] = useState<AboutProfileRecord>(emptyAbout);
   const [honors, setHonors] = useState<AboutHonorItem[]>([]);

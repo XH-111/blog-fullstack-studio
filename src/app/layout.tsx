@@ -13,7 +13,7 @@ const navItems = [
   { href: "/archives", label: "归档" },
   { href: "/about", label: "关于我" },
   { href: "/guestbook", label: "留言板" },
-  { href: "/admin/login", label: "后台登录" },
+  { href: "/admin", label: "后台" },
 ];
 
 export default function RootLayout({

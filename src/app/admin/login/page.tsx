@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { getStoredAdminToken, setStoredAdminToken } from "@/lib/admin-auth";
 import { SurfaceCard } from "@/components/surface-card";
 
 type LoginResult = {
@@ -11,6 +12,7 @@ type LoginResult = {
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(() => Boolean(getStoredAdminToken()));
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [resetUsername, setResetUsername] = useState("");
@@ -19,6 +21,18 @@ export default function AdminLoginPage() {
   const [mode, setMode] = useState<"login" | "forgot">("login");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const token = getStoredAdminToken();
+
+    if (!token) {
+      return;
+    }
+
+    apiFetch("/api/auth/me", { token })
+      .then(() => router.replace("/admin"))
+      .catch(() => setCheckingAuth(false));
+  }, [router]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -30,8 +44,8 @@ export default function AdminLoginPage() {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
-      localStorage.setItem("blog_admin_token", result.token);
-      router.push("/admin");
+      setStoredAdminToken(result.token);
+      router.replace("/admin");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "登录失败");
     } finally {
@@ -81,6 +95,16 @@ export default function AdminLoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkingAuth) {
+    return (
+      <main className="mx-auto flex w-full max-w-lg flex-1 items-center px-4 py-16">
+        <SurfaceCard className="w-full">
+          <p className="text-sm text-[var(--color-text)]">正在检查登录状态...</p>
+        </SurfaceCard>
+      </main>
+    );
   }
 
   return (

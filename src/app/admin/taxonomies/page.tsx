@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, CategoryRecord, TagRecord } from "@/lib/api";
+import { getStoredAdminToken } from "@/lib/admin-auth";
 import { SurfaceCard } from "@/components/surface-card";
 
 export default function TaxonomiesPage() {
@@ -12,12 +13,7 @@ export default function TaxonomiesPage() {
   const [newCategory, setNewCategory] = useState("");
   const [newTag, setNewTag] = useState("");
   const [message, setMessage] = useState("");
-  const [token] = useState(
-    () =>
-      (typeof window !== "undefined" &&
-        localStorage.getItem("blog_admin_token")) ||
-      ""
-  );
+  const [token] = useState(() => getStoredAdminToken());
 
   async function loadTaxonomies() {
     const [categoryList, tagList] = await Promise.all([

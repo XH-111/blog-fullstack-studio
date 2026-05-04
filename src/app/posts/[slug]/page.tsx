@@ -1,10 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { apiFetch, normalizeRenderedHtml, PostRecord } from "@/lib/api";
+import { apiFetch, CommentRecord, normalizeRenderedHtml, PostRecord } from "@/lib/api";
 import { resolveCoverImage } from "@/lib/cover-image";
 import { CommentForm } from "@/components/comment-form";
+
+type CommentTreeNode = CommentRecord & {
+  replies: CommentTreeNode[];
+};
+
+function buildCommentTree(comments: CommentRecord[]) {
+  const nodeMap = new Map<number, CommentTreeNode>();
+  const roots: CommentTreeNode[] = [];
+
+  comments.forEach((comment) => {
+    nodeMap.set(comment.id, { ...comment, replies: [] });
+  });
+
+  comments.forEach((comment) => {
+    const node = nodeMap.get(comment.id);
+
+    if (!node) {
+      return;
+    }
+
+    if (comment.parentId) {
+      const parent = nodeMap.get(comment.parentId);
+      if (parent) {
+        parent.replies.push(node);
+        return;
+      }
+    }
+
+    roots.push(node);
+  });
+
+  return roots;
+}
 
 export default function PostDetailPage() {
   const params = useParams<{ slug: string }>();
@@ -12,6 +45,7 @@ export default function PostDetailPage() {
   const [error, setError] = useState("");
   const [isLiking, setIsLiking] = useState(false);
   const [hasLiked, setHasLiked] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<CommentRecord | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -46,6 +80,76 @@ export default function PostDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "文章加载失败");
     }
+  }
+
+  useEffect(() => {
+    if (!post || typeof window === "undefined") {
+      return;
+    }
+
+    const viewKey = `viewed_post_${post.id}`;
+    if (sessionStorage.getItem(viewKey) === "true") {
+      return;
+    }
+
+    sessionStorage.setItem(viewKey, "true");
+
+    apiFetch<{ id: number; viewCount: number }>(`/api/posts/${post.id}/view`, {
+      method: "PATCH",
+    })
+      .then((result) => {
+        setPost((current) =>
+          current && current.id === result.id
+            ? { ...current, viewCount: result.viewCount }
+            : current
+        );
+      })
+      .catch(() => {
+        sessionStorage.removeItem(viewKey);
+      });
+  }, [post]);
+
+  const commentTree = useMemo(
+    () => buildCommentTree(post?.comments || []),
+    [post?.comments]
+  );
+
+  function renderComment(nodes: CommentTreeNode[], depth = 0): ReactNode {
+    return nodes.map((comment) => (
+      <div
+        key={comment.id}
+        className={`rounded-[22px] border border-[var(--color-line)] bg-white/78 p-4 ${
+          depth > 0 ? "mt-4 ml-4 md:ml-8" : ""
+        }`}
+      >
+        <div className="flex items-center justify-between gap-4 text-sm">
+          <p className="font-semibold text-[var(--color-ink)]">
+            {comment.authorName}
+            {comment.isAdmin ? " · 站长" : ""}
+            {comment.isAi ? " · AI 正确性评论" : ""}
+          </p>
+          <p className="text-[var(--color-text-faint)]">#{comment.floor}</p>
+        </div>
+        <p className="mt-2 text-xs text-[var(--color-text-faint)]">
+          {new Date(comment.createdAt).toLocaleString("zh-CN")}
+        </p>
+        <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">{comment.content}</p>
+        {!comment.isAi && (
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setReplyTarget(comment)}
+              className="rounded-full border border-[var(--color-line)] bg-white px-4 py-2 text-xs text-[var(--color-text)]"
+            >
+              回复
+            </button>
+          </div>
+        )}
+        {comment.replies.length > 0 && (
+          <div className="mt-4">{renderComment(comment.replies, depth + 1)}</div>
+        )}
+      </div>
+    ));
   }
 
   async function handleLike() {
@@ -209,30 +313,26 @@ export default function PostDetailPage() {
       <section className="mx-auto mt-6 w-full max-w-6xl px-4">
         <div className="rounded-[30px] border border-white/70 bg-white/78 p-6 shadow-[0_22px_90px_rgba(67,48,82,0.12)] backdrop-blur-xl md:p-8">
           <h2 className="font-serif text-3xl text-[var(--color-ink)]">评论区</h2>
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {post.comments?.map((comment) => (
-              <div
-                key={comment.id}
-                className="rounded-[22px] border border-[var(--color-line)] bg-white/78 p-4"
-              >
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <p className="font-semibold text-[var(--color-ink)]">
-                    {comment.authorName}
-                    {comment.isAi ? " · AI 正确性评论" : ""}
-                  </p>
-                  <p className="text-[var(--color-text-faint)]">#{comment.floor}</p>
-                </div>
-                <p className="mt-2 text-xs text-[var(--color-text-faint)]">
-                  {new Date(comment.createdAt).toLocaleString("zh-CN")}
-                </p>
-                <p className="mt-3 text-sm leading-7 text-[var(--color-text)]">
-                  {comment.content}
-                </p>
+          <div className="mt-6 space-y-4">
+            {commentTree.length > 0 ? (
+              renderComment(commentTree)
+            ) : (
+              <div className="rounded-[22px] border border-[var(--color-line)] bg-white/78 p-4 text-sm text-[var(--color-text)]">
+                还没有评论，来留下第一条吧。
               </div>
-            ))}
+            )}
           </div>
           <div className="mt-8">
-            <CommentForm postId={post.id} onSubmitted={reloadPost} />
+            <CommentForm
+              postId={post.id}
+              parentId={replyTarget?.id}
+              replyToAuthor={replyTarget?.authorName}
+              onCancelReply={() => setReplyTarget(null)}
+              onSubmitted={async () => {
+                await reloadPost();
+                setReplyTarget(null);
+              }}
+            />
           </div>
         </div>
       </section>

@@ -8,6 +8,8 @@ const {
   generateExcerpt,
   generateInterviewMarkdown,
 } = require("../services/ai-service");
+const { createLikeNotification } = require("../services/notification-service");
+const { getTodayDateKey, incrementDailyMetric } = require("../utils/daily-metrics");
 
 const router = express.Router();
 
@@ -343,15 +345,10 @@ router.get("/:slug", async (req, res) => {
     return res.status(404).json({ message: "文章不存在" });
   }
 
-  await prisma.post.update({
-    where: { id: post.id },
-    data: { viewCount: { increment: 1 } },
-  });
-
   res.json(mapPost(post));
 });
 
-router.patch("/:id/like", async (req, res) => {
+router.patch("/:id/view", async (req, res) => {
   const postId = Number(req.params.id);
 
   if (!Number.isInteger(postId)) {
@@ -369,8 +366,46 @@ router.patch("/:id/like", async (req, res) => {
 
   const updated = await prisma.post.update({
     where: { id: postId },
+    data: { viewCount: { increment: 1 } },
+    select: { id: true, viewCount: true },
+  });
+
+  await incrementDailyMetric(getTodayDateKey(), {
+    viewIncrement: { increment: 1 },
+  });
+
+  res.json(updated);
+});
+
+router.patch("/:id/like", async (req, res) => {
+  const postId = Number(req.params.id);
+
+  if (!Number.isInteger(postId)) {
+    return res.status(400).json({ message: "文章 ID 不正确" });
+  }
+
+  const existing = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { id: true, status: true, title: true },
+  });
+
+  if (!existing || existing.status !== "PUBLISHED") {
+    return res.status(404).json({ message: "文章不存在" });
+  }
+
+  const updated = await prisma.post.update({
+    where: { id: postId },
     data: { likeCount: { increment: 1 } },
     select: { id: true, likeCount: true },
+  });
+
+  await createLikeNotification({
+    id: existing.id,
+    title: existing.title,
+    likeCount: updated.likeCount,
+  });
+  await incrementDailyMetric(getTodayDateKey(), {
+    likeIncrement: { increment: 1 },
   });
 
   res.json(updated);
@@ -411,6 +446,9 @@ router.post("/", requireAdmin, async (req, res) => {
   });
 
   const finalPost = await fetchFullPost(post.id);
+  await incrementDailyMetric(getTodayDateKey(post.createdAt), {
+    postIncrement: { increment: 1 },
+  });
   res.json(mapPost(finalPost));
 });
 

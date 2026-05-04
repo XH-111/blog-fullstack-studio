@@ -61,12 +61,40 @@ export async function apiFetch<T>(
 
 export type CommentRecord = {
   id: number;
+  postId: number;
+  parentId?: number | null;
   authorName: string;
   email?: string | null;
   content: string;
   floor: number;
   isAi: boolean;
+  isAdmin: boolean;
   createdAt: string;
+};
+
+export type NotificationRecord = {
+  id: number;
+  type: "LIKE" | "COMMENT" | "GUESTBOOK";
+  title: string;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+  post?: {
+    id: number;
+    title: string;
+    slug: string;
+  } | null;
+  comment?: {
+    id: number;
+    authorName: string;
+    floor: number;
+    parentId?: number | null;
+  } | null;
+  guestbookMessage?: {
+    id: number;
+    authorName: string;
+    isPrivate: boolean;
+  } | null;
 };
 
 export type GuestbookMessageRecord = {

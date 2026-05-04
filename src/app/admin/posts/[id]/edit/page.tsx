@@ -3,18 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiFetch, PostRecord } from "@/lib/api";
+import { getStoredAdminToken } from "@/lib/admin-auth";
 import { AdminPostForm } from "@/components/admin-post-form";
 
 export default function EditPostPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [post, setPost] = useState<PostRecord | null>(null);
-  const [token] = useState(
-    () =>
-      (typeof window !== "undefined" &&
-        localStorage.getItem("blog_admin_token")) ||
-      ""
-  );
+  const [token] = useState(() => getStoredAdminToken());
 
   useEffect(() => {
     if (!token) {
